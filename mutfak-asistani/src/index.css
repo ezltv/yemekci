@@ -4,15 +4,20 @@
   -webkit-font-smoothing: antialiased;
 }
 
-html, body {
+/* html, body VE #root (React container) hepsini kilitliyoruz */
+html, body, #root {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow-x: hidden; /* Yan kaymayı engelle */
+  max-width: 100vw; /* Ekrandan taşmayı kesin olarak engelle */
+  overflow-x: hidden; /* Yan kaydırma çubuğunu gizle */
   
-  /* Sayfayı aşağı çekince yenileme efektini kapat (Native hissi için) */
+  /* Dikeyde (aşağı çekince) yenileme efektini kapat */
   overscroll-behavior-y: none; 
+  
+  /* KRİTİK: Yatayda (sağa sola) zıplamayı ve yaylanmayı kapat */
+  overscroll-behavior-x: none;
   
   /* Mobil font ayarları */
   -webkit-text-size-adjust: 100%;
@@ -23,12 +28,21 @@ html, body {
 * {
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
-  user-select: none; /* Yazıların seçilmesini engelle (Uygulama gibi olsun) */
+  user-select: none; /* Yazıların seçilmesini engelle */
+  
+  /* Flexbox içinde uzun metinlerin sayfayı sağa doğru genişletmesini (patlatmasını) engeller */
+  min-width: 0; 
 }
 
 /* Input ve Buttonlara dokunulabilirliği geri aç */
 input, textarea, button, select {
   user-select: text;
+}
+
+/* Textarea'nın elle boyutlandırılmasını ve taşmasını engelle */
+textarea {
+  resize: none; /* Kullanıcı sağ alt köşeden çekip büyütemesin */
+  max-width: 100%;
 }
 
 /* Resimlerin taşmasını engelle */
