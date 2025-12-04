@@ -76,7 +76,7 @@
           <button @click="googleResimAra(yeniMalzeme.ad)" class="google-btn" title="Google'da Ara">🔍 Google</button>
           <button @click="aiResimUret" class="ai-btn" title="Yapay Zeka ile Üret">🤖 AI</button>
         </div>
-        <small v-if="aiLoading" style="color: purple;">Yapay zeka resim çiziyor...</small>
+        <small v-if="aiLoading" style="color: purple;">Yapay zeka (İngilizce çeviriyle) resim çiziyor...</small>
       </div>
 
       <button @click="malzemeEkle" class="ekle-btn">✅ Depoya Kaydet</button>
@@ -178,9 +178,9 @@ const listeArama = ref("")
 const secilenUrun = ref(null)
 const dusulecekMiktar = ref(1)
 const seciliKonumFiltresi = ref("Hepsi")
-const aiLoading = ref(false) // AI Yükleniyor mu?
+const aiLoading = ref(false)
 
-// --- GÜNCELLENMİŞ DEPO YERLERİ ---
+// --- DEPO YERLERİ ---
 const depoYerleri = [
   "Buzdolabı",
   "Buzdolabı Üst Raf",
@@ -202,30 +202,25 @@ const toplamStokHesapla = computed(() => {
   return yeniMalzeme.value.paketSayisi * yeniMalzeme.value.paketAgirligi
 })
 
-// --- KRİTİK ALGORİTMA: SIRALAMA VE FİLTRELEME ---
+// --- KRİTİK ALGORİTMA ---
 const siraliVeFiltreliListe = computed(() => {
   let liste = kiler.value
 
-  // 1. Arama Filtresi
   if (listeArama.value) {
     liste = liste.filter(i => i.malzeme_adi.toLowerCase().includes(listeArama.value.toLowerCase()))
   }
 
-  // 2. Konum Filtresi
   if (seciliKonumFiltresi.value !== 'Hepsi') {
     liste = liste.filter(i => i.depo_yer === seciliKonumFiltresi.value)
   }
 
-  // 3. Sıralama (Kritik Stok en üste > SKT Geçenler > Diğerleri)
   return liste.sort((a, b) => {
     const aKritik = stokAzMi(a)
     const bKritik = stokAzMi(b)
     
-    // Biri kritik diğeri değilse, kritik olan üste
     if (aKritik && !bKritik) return -1
     if (!aKritik && bKritik) return 1
 
-    // İkisi de aynı durumdaysa SKT'ye bak
     if (a.son_kullanma_tarihi && b.son_kullanma_tarihi) {
       return new Date(a.son_kullanma_tarihi) - new Date(b.son_kullanma_tarihi)
     }
@@ -233,7 +228,6 @@ const siraliVeFiltreliListe = computed(() => {
   })
 })
 
-// --- KRİTİK STOK KONTROLÜ ---
 function stokAzMi(item) {
   const miktar = parseFloat(item.miktar)
   const birim = item.birim.toLowerCase()
@@ -308,20 +302,38 @@ function googleResimAra(kelime) {
   window.open(url, '_blank');
 }
 
-// --- YAPAY ZEKA İLE RESİM BULMA ---
+// --- AKILLI ÇEVİRİ VE AI RESİM ÜRETME ---
 function aiResimUret() {
   if(!yeniMalzeme.value.ad) return alert("Önce ürün adını yazmalısın!");
   
   aiLoading.value = true
+
+  // Genişletilmiş Türkçe-İngilizce Sözlük (En yaygın ürünler)
+  const trToEn = {
+    'domates': 'tomato', 'biber': 'pepper', 'patlıcan': 'eggplant', 'soğan': 'onion', 'sarımsak': 'garlic',
+    'patates': 'potato', 'havuç': 'carrot', 'kabak': 'zucchini', 'ıspanak': 'spinach', 'limon': 'lemon',
+    'elma': 'apple', 'muz': 'banana', 'çilek': 'strawberry', 'portakal': 'orange', 'karpuz': 'watermelon',
+    'pirinç': 'rice', 'mercimek': 'lentil', 'nohut': 'chickpea', 'fasulye': 'bean', 'makarna': 'pasta',
+    'süt': 'milk', 'yumurta': 'egg', 'peynir': 'cheese', 'yoğurt': 'yogurt', 'tereyağı': 'butter',
+    'ekmek': 'bread', 'un': 'flour', 'şeker': 'sugar', 'tuz': 'salt', 'yağ': 'oil', 'salça': 'tomato paste',
+    'zeytin': 'olive', 'bal': 'honey', 'reçel': 'jam', 'çay': 'tea', 'kahve': 'coffee', 'su': 'water',
+    'deterjan': 'detergent', 'sabun': 'soap', 'şampuan': 'shampoo', 'peçete': 'napkin',
+    'tuvalet kağıdı': 'toilet paper', 'kağıt havlu': 'paper towel', 'çamaşır suyu': 'bleach',
+    'diş macunu': 'toothpaste', 'diş fırçası': 'toothbrush'
+  }
+
+  // Girilen kelimeyi küçük harfe çevirip boşluklarını al
+  const arananKelime = yeniMalzeme.value.ad.toLowerCase().trim()
   
-  // Basit ama etkili prompt: "Ürün Adı" + "ürün fotoğrafı" + "beyaz arka plan"
-  const prompt = `${yeniMalzeme.value.ad} product photography realistic white background`
+  // Sözlükte varsa İngilizcesini al, yoksa Türkçesini kullan
+  const ingilizceIsim = trToEn[arananKelime] || arananKelime
+  
+  // Daha kaliteli prompt oluşturuyoruz (Stüdyo ışığı, gerçekçi vb.)
+  const prompt = `${ingilizceIsim} product photography realistic white background, studio lighting, high quality, 4k`
   const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`
   
-  // URL'yi direkt kutuya yazıyoruz
   yeniMalzeme.value.resim = aiUrl
   
-  // Kullanıcıya hissettirmek için kısa bir bekleme efekti
   setTimeout(() => {
     aiLoading.value = false
   }, 1000)
