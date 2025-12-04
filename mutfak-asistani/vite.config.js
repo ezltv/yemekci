@@ -1,24 +1,43 @@
-# Bağımlılıklar (En önemlisi bu)
-node_modules/
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { VitePWA } from 'vite-plugin-pwa'
 
-# Build (Derleme) çıktıları
-dist/
-dist-ssr/
-
-# Çevre Değişkenleri (Şifreler içerir, ASLA repoya gitmemeli)
-.env
-.env.local
-.env.*.local
-
-# Editör klasörleri
-.vscode/
-.idea/
-
-# İşletim sistemi dosyaları
-.DS_Store
-Thumbs.db
-
-# Log dosyaları
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+export default defineConfig({
+  plugins: [
+    vue(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      manifest: {
+        name: 'Mutfak Asistanı',
+        short_name: 'Mutfak',
+        description: 'Akıllı Kiler ve Yemek Tarifi Yönetimi',
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
+        start_url: '/',
+        icons: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ]
+      }
+    })
+  ],
+  base: './'
+})
