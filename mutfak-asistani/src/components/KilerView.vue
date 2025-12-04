@@ -2,9 +2,11 @@
   <div class="p-20">
     <h2>📦 Ev Envanteri & Stok Takibi</h2>
 
+    <!-- YENİ MALZEME EKLEME FORMU -->
     <div class="ekleme-formu">
       <h3>➕ Yeni Ürün Girişi</h3>
       
+      <!-- 1. ÜRÜN ADI -->
       <div class="form-satir">
         <label>Ürün Adı:</label>
         <input 
@@ -22,6 +24,7 @@
         </datalist>
       </div>
 
+      <!-- 2. KONUM SEÇİMİ -->
       <div class="form-satir">
         <label>Nereye Koyacaksın?</label>
         <select v-model="yeniMalzeme.konum" class="tam-genislik">
@@ -29,6 +32,7 @@
         </select>
       </div>
 
+      <!-- 3. MİKTAR HESAPLAMA -->
       <div class="hesap-kutusu">
         <div class="girdi-grup">
           <label>Paket</label>
@@ -53,6 +57,7 @@
         </div>
       </div>
 
+      <!-- 4. SKT VE RESİM -->
       <div class="form-satir">
         <label>Son Kullanma Tarihi (SKT):</label>
         <input v-model="yeniMalzeme.skt" type="date" class="tam-genislik tarih-input">
@@ -64,11 +69,14 @@
         <small>Konum: {{ yeniMalzeme.konum }}</small>
       </p>
 
+      <!-- RESİM BULUCU (GÜNCELLENDİ: AI EKLENDİ) -->
       <div class="form-satir">
         <div class="resim-bulucu">
           <input v-model="yeniMalzeme.resim" placeholder="Resim URL..." type="text" class="link-input">
-          <button @click="googleResimAra(yeniMalzeme.ad)" class="google-btn">🔍 Bul</button>
+          <button @click="googleResimAra(yeniMalzeme.ad)" class="google-btn" title="Google'da Ara">🔍 Google</button>
+          <button @click="aiResimUret" class="ai-btn" title="Yapay Zeka ile Üret">🤖 AI</button>
         </div>
+        <small v-if="aiLoading" style="color: purple;">Yapay zeka resim çiziyor...</small>
       </div>
 
       <button @click="malzemeEkle" class="ekle-btn">✅ Depoya Kaydet</button>
@@ -76,8 +84,10 @@
 
     <hr>
 
+    <!-- LİSTELEME VE FİLTRELEME -->
     <h3>Evdeki Envanter</h3>
 
+    <!-- Depo Yeri Filtresi (Tablar) -->
     <div class="konum-filtresi">
       <button 
         :class="{ active: seciliKonumFiltresi === 'Hepsi' }" 
@@ -112,6 +122,7 @@
         <div class="info">
           <div class="baslik-satir">
             <h3>{{ item.malzeme_adi.toUpperCase() }}</h3>
+            <!-- Konum Etiketi -->
             <span class="konum-badge">{{ item.depo_yer || 'Belirsiz' }}</span>
           </div>
           
@@ -126,6 +137,7 @@
             </span>
           </div>
 
+          <!-- Butonlar -->
           <div class="aksiyon-butonlari">
             <button @click="stokDuzenleModalAc(item)" class="kullan-btn">🔻 Kullan</button>
             <button @click="malzemeSil(item.id)" class="sil-btn">Sil</button>
@@ -134,6 +146,7 @@
       </div>
     </div>
 
+    <!-- MODAL (STOK DÜŞME) -->
     <div v-if="secilenUrun" class="modal-overlay" @click.self="modalKapat">
       <div class="modal-content">
         <h3>🔻 Stok Tüketimi</h3>
@@ -165,11 +178,20 @@ const listeArama = ref("")
 const secilenUrun = ref(null)
 const dusulecekMiktar = ref(1)
 const seciliKonumFiltresi = ref("Hepsi")
+const aiLoading = ref(false) // AI Yükleniyor mu?
 
-// SABİT DEPO YERLERİ
+// --- GÜNCELLENMİŞ DEPO YERLERİ ---
 const depoYerleri = [
-  "Buzdolabı", "Kiler", "Balkondolap", "Ezeldolap", 
-  "Yatakdolap", "Banyo", "Ivırzıvır"
+  "Buzdolabı",
+  "Buzdolabı Üst Raf",
+  "Buzdolabı Ara Raf",
+  "Buzdolabı Alt Raf",
+  "Kiler", 
+  "Balkondolap", 
+  "Ezeldolap", 
+  "Yatakdolap", 
+  "Banyo", 
+  "Ivırzıvır"
 ]
 
 const yeniMalzeme = ref({ 
@@ -216,15 +238,12 @@ function stokAzMi(item) {
   const miktar = parseFloat(item.miktar)
   const birim = item.birim.toLowerCase()
 
-  // Adet, Paket, Rulo için sınır: 3
   if (['adet', 'paket', 'rulo', 'kavanoz', 'şişe'].includes(birim)) {
     return miktar <= 3
   }
-  // Gram, Mililitre için sınır: 500
   if (['gr', 'ml'].includes(birim)) {
     return miktar <= 500
   }
-  // KG, Litre için sınır: 0.5
   if (['kg', 'litre'].includes(birim)) {
     return miktar <= 0.5
   }
@@ -256,11 +275,10 @@ async function malzemeEkle() {
     birim: yeniMalzeme.value.birim,
     son_kullanma_tarihi: yeniMalzeme.value.skt || null,
     resim_url: yeniMalzeme.value.resim || 'https://placehold.co/100x100?text=' + yeniMalzeme.value.ad,
-    depo_yer: yeniMalzeme.value.konum // YENİ: Konumu kaydet
+    depo_yer: yeniMalzeme.value.konum
   })
   if (!error) {
     alert("Stok Eklendi!")
-    // Formu sıfırla ama konumu koru (belki aynı yere ekler)
     const eskiKonum = yeniMalzeme.value.konum
     yeniMalzeme.value = { ad: '', paketSayisi: 1, paketAgirligi: 1, birim: 'adet', skt: '', resim: '', konum: eskiKonum }
     getKiler()
@@ -290,6 +308,25 @@ function googleResimAra(kelime) {
   window.open(url, '_blank');
 }
 
+// --- YAPAY ZEKA İLE RESİM BULMA ---
+function aiResimUret() {
+  if(!yeniMalzeme.value.ad) return alert("Önce ürün adını yazmalısın!");
+  
+  aiLoading.value = true
+  
+  // Basit ama etkili prompt: "Ürün Adı" + "ürün fotoğrafı" + "beyaz arka plan"
+  const prompt = `${yeniMalzeme.value.ad} product photography realistic white background`
+  const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`
+  
+  // URL'yi direkt kutuya yazıyoruz
+  yeniMalzeme.value.resim = aiUrl
+  
+  // Kullanıcıya hissettirmek için kısa bir bekleme efekti
+  setTimeout(() => {
+    aiLoading.value = false
+  }, 1000)
+}
+
 function formatTarih(tarihStr) { if(!tarihStr) return ''; return new Date(tarihStr).toLocaleDateString('tr-TR') }
 function sktGectiMi(tarihStr) { const bugun = new Date(); bugun.setHours(0,0,0,0); const skt = new Date(tarihStr); return skt < bugun }
 
@@ -312,6 +349,7 @@ onMounted(() => { getKiler(); getMalzemeKutuphanesi() })
 .resim-bulucu { display: flex; gap: 5px; }
 .link-input { flex: 1; padding: 10px; border: 2px solid #000; border-radius: 6px; box-sizing: border-box; }
 .google-btn { background: #4285F4; color: white; border: none; border-radius: 6px; padding: 0 15px; cursor: pointer; font-weight: bold; }
+.ai-btn { background: #6f42c1; color: white; border: none; border-radius: 6px; padding: 0 15px; cursor: pointer; font-weight: bold; } /* AI BUTONU İÇİN MOR RENK */
 .ekle-btn { width: 100%; background: #000; color: white; padding: 14px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; font-size: 16px;}
 .liste-arama-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; box-sizing: border-box; }
 
