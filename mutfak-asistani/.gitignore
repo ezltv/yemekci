@@ -1,24 +1,24 @@
-# Logs
-logs
-*.log
+# Bağımlılıklar (En önemlisi bu)
+node_modules/
+
+# Build (Derleme) çıktıları
+dist/
+dist-ssr/
+
+# Çevre Değişkenleri (Şifreler içerir, ASLA repoya gitmemeli)
+.env
+.env.local
+.env.*.local
+
+# Editör klasörleri
+.vscode/
+.idea/
+
+# İşletim sistemi dosyaları
+.DS_Store
+Thumbs.db
+
+# Log dosyaları
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
