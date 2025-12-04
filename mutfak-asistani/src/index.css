@@ -34,6 +34,14 @@ html, body, #root {
   min-width: 0; 
 }
 
+/* YENİ: Envanter listesi gibi alanlarda metinlerin taşmasını engelle */
+/* Uzun ürün isimleri veya içerikler sağa doğru taşmak yerine alt satıra insin */
+p, h1, h2, h3, h4, h5, h6, span, div, li, td {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word; /* Gerekirse kelimeyi ortadan bölerek alt satıra at */
+}
+
 /* Input ve Buttonlara dokunulabilirliği geri aç */
 input, textarea, button, select {
   user-select: text;
