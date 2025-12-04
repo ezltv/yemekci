@@ -53,24 +53,13 @@
           </button>
         </div>
 
-        <!-- YATAY KAYAN FİLTRELER -->
-        <div class="filters-scroll">
-          <button 
-            @click="seciliKonumFiltresi = 'Hepsi'"
-            class="filter-chip"
-            :class="{ active: seciliKonumFiltresi === 'Hepsi' }"
-          >
-            Hepsi
-          </button>
-          <button 
-            v-for="yer in filtreSecenekleri" 
-            :key="yer" 
-            @click="seciliKonumFiltresi = yer"
-            class="filter-chip"
-            :class="{ active: seciliKonumFiltresi === yer }"
-          >
-            {{ yer }}
-          </button>
+        <!-- YENİ: AÇILIR MENÜ FİLTRE (Sağa sola kaymayı engeller) -->
+        <div class="filter-row">
+          <label class="filter-label">🔍 Konum Filtresi:</label>
+          <select v-model="seciliKonumFiltresi" class="filter-select">
+            <option value="Hepsi">🏠 Tümü</option>
+            <option v-for="yer in filtreSecenekleri" :key="yer" :value="yer">{{ yer }}</option>
+          </select>
         </div>
       </div>
     </div>
@@ -111,8 +100,12 @@
             </div>
           </div>
 
-          <!-- Sağ: Sil Butonu -->
-          <button @click="malzemeSil(item.id)" class="del-btn">🗑️</button>
+          <!-- Sağ: Aksiyon Butonları -->
+          <div class="card-actions">
+            <!-- YENİ: EKSİLTME BUTONU -->
+            <button @click="stokEksilt(item)" class="action-btn decrease-btn">➖</button>
+            <button @click="malzemeSil(item.id)" class="action-btn del-btn">🗑️</button>
+          </div>
         </div>
       </div>
       
@@ -125,7 +118,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { supabase } from '../supabase' // Supabase dosyanın yolu doğru olmalı
+import { supabase } from '../supabase' 
 
 // --- STATE ---
 const kiler = ref([])
@@ -133,7 +126,6 @@ const loading = ref(true)
 const aiLoading = ref(false)
 const seciliKonumFiltresi = ref("Hepsi")
 
-// Senin istediğin özel konumlar
 const depoYerleri = [
   "Buzdolabı Üst Raf", "Buzdolabı Ara Raf", "Buzdolabı Alt Raf", 
   "Buzdolabı Kapak", "Buzdolabı Sebzelik",
@@ -170,7 +162,7 @@ const siraliVeFiltreliListe = computed(() => {
     }
   }
 
-  // Sıralama: Önce kritik stok, sonra SKT yakın olanlar
+  // Sıralama
   return liste.sort((a, b) => {
     const aKritik = stokAzMi(a)
     const bKritik = stokAzMi(b)
@@ -188,20 +180,18 @@ async function getKiler() {
   loading.value = false
 }
 
-// AI Resim Üretme (Senin kodundaki mantık)
+// AI Resim Üretme
 async function aiResimUret() {
   if(!yeniMalzeme.value.ad) { alert("Önce ürün adını yazmalısın!"); return; }
   aiLoading.value = true
   
   const arananKelime = yeniMalzeme.value.ad.toLowerCase().trim()
-  // Basit çeviri sözlüğü
-  const trToEn = { 'domates': 'tomato', 'biber': 'pepper', 'süt': 'milk', 'yumurta': 'egg', 'deterjan': 'detergent', 'salça': 'tomato paste', 'pirinç': 'rice', 'mercimek': 'lentils', 'makarna': 'pasta', 'ekmek': 'bread' } 
+  const trToEn = { 'domates': 'tomato', 'biber': 'pepper', 'süt': 'milk', 'yumurta': 'egg', 'deterjan': 'detergent', 'salça': 'tomato paste', 'pirinç': 'rice', 'mercimek': 'lentils', 'makarna': 'pasta', 'ekmek': 'bread', 'yoğurt': 'yogurt', 'peynir': 'cheese', 'yağ': 'oil' } 
   const ingilizceIsim = trToEn[arananKelime] || arananKelime
   
   const prompt = `${ingilizceIsim} product photography, sharp focus, highly detailed, realistic white background, studio lighting, 8k`
   const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=300&height=300&nologo=true`
   
-  // Resim yüklenmesi için kısa bekleme simülasyonu
   await new Promise(r => setTimeout(r, 800))
   yeniMalzeme.value.resim = aiUrl
   aiLoading.value = false
@@ -210,7 +200,6 @@ async function aiResimUret() {
 async function malzemeEkle() {
   if (!yeniMalzeme.value.ad) return alert("İsim yazmalısın!")
   
-  // Resim yoksa otomatik üret
   if (!yeniMalzeme.value.resim) {
     await aiResimUret()
   }
@@ -225,7 +214,6 @@ async function malzemeEkle() {
   })
   
   if (!error) {
-    // Formu sıfırla (Konum kalsın, kolaylık olsun)
     const eskiKonum = yeniMalzeme.value.konum
     yeniMalzeme.value = { ad: '', paketSayisi: 1, paketAgirligi: 1, birim: 'adet', skt: '', resim: '', konum: eskiKonum }
     getKiler()
@@ -234,10 +222,38 @@ async function malzemeEkle() {
   }
 }
 
+// YENİ: STOK EKSİLTME (1 Azaltma)
+async function stokEksilt(item) {
+  if (item.miktar <= 0) return;
+  const yeniMiktar = Math.max(0, item.miktar - 1);
+  
+  // Eğer 0'a düşerse silme sorusu
+  if (yeniMiktar === 0) {
+    if (confirm(`${item.malzeme_adi} bitti. Listeden silinsin mi?`)) {
+      malzemeSil(item.id);
+    } else {
+      // Silme iptal edilirse 0 olarak güncelle
+      await stokGuncelle(item.id, 0);
+      item.miktar = 0;
+    }
+    return;
+  }
+
+  // Anlık arayüz güncellemesi (Hızlı hissettirmek için)
+  item.miktar = yeniMiktar;
+  
+  // Veritabanı güncellemesi
+  await stokGuncelle(item.id, yeniMiktar);
+}
+
+async function stokGuncelle(id, miktar) {
+  const { error } = await supabase.from('kiler').update({ miktar: miktar }).eq('id', id)
+  if(error) console.error("Stok güncelleme hatası", error)
+}
+
 async function malzemeSil(id) {
-  if(!confirm("Silmek istiyor musun?")) return;
+  if(!confirm("Bu ürünü tamamen silmek istiyor musun?")) return;
   await supabase.from('kiler').delete().eq('id', id)
-  // Listeyi yerel olarak güncelle (Hız için)
   kiler.value = kiler.value.filter(i => i.id !== id)
 }
 
@@ -265,14 +281,15 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ANA YAPI */
+/* ANA YAPI - TAM EKRAN VE TAŞMA ENGELLEME */
 .kiler-container {
   display: flex;
   flex-direction: column;
-  height: 100%; /* App.vue içindeki content-area'yı doldur */
+  height: 100%;
+  width: 100%;
   background: #f8f9fa;
   position: relative;
-  overflow: hidden; /* Sağa sola taşmayı engelle */
+  overflow: hidden; /* Dışa taşmaları engelle */
 }
 
 /* 1. STICKY HEADER (SABİT ÜST) */
@@ -283,20 +300,21 @@ onMounted(() => {
   background: #fff;
   border-bottom: 1px solid #eee;
   box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-  flex-shrink: 0; /* Asla büzüşme */
+  flex-shrink: 0;
+  width: 100%;
 }
 
 .header-content {
-  padding: 15px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
-.mini-title { margin: 0; font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+.mini-title { margin: 0; font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
 
 /* FORM ELEMANLARI */
-.form-row { display: flex; gap: 8px; width: 100%; }
+.form-row { display: flex; gap: 6px; width: 100%; }
 
 .input-with-btn { display: flex; flex: 1; gap: 5px; }
 .main-input { flex: 1; padding: 10px; background: #f3f4f6; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; }
@@ -313,37 +331,34 @@ onMounted(() => {
 
 .add-btn { flex: 1; background: #111827; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; }
 
-/* FİLTRELER */
-.filters-scroll {
+/* YENİ FİLTRE SATIRI (SELECT) */
+.filter-row {
   display: flex;
+  align-items: center;
   gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 5px;
   margin-top: 5px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Firefox */
+  background: #f3f4f6;
+  padding: 8px;
+  border-radius: 8px;
 }
-.filters-scroll::-webkit-scrollbar { display: none; } /* Chrome */
-
-.filter-chip {
-  padding: 6px 14px;
-  border-radius: 20px;
-  border: 1px solid #e5e7eb;
+.filter-label { font-size: 12px; font-weight: 600; color: #666; }
+.filter-select {
+  flex: 1;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
   background: white;
-  font-size: 12px;
-  white-space: nowrap;
-  color: #4b5563;
+  font-size: 13px;
   font-weight: 600;
-  transition: all 0.2s;
+  color: #333;
 }
-.filter-chip.active { background: #111827; color: white; border-color: #111827; }
 
 /* 2. SCROLLABLE LIST (KAYAN LİSTE) */
 .scrollable-list {
   flex: 1;
-  overflow-y: auto; /* Sadece burası kaysın */
-  padding: 15px;
-  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-x: hidden; /* Yana taşmayı kesin engelle */
+  padding: 12px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -367,22 +382,36 @@ onMounted(() => {
 .product-card.kritik { border: 1px solid #fed7aa; background: #fff7ed; }
 .product-card.bayat { opacity: 0.6; filter: grayscale(0.8); }
 
-.card-left { display: flex; gap: 12px; align-items: center; min-width: 0; }
-.img-box { position: relative; width: 60px; height: 60px; border-radius: 10px; overflow: hidden; background: #f3f4f6; flex-shrink: 0; }
+.card-left { display: flex; gap: 10px; align-items: center; min-width: 0; flex: 1; }
+.img-box { position: relative; width: 50px; height: 50px; border-radius: 10px; overflow: hidden; background: #f3f4f6; flex-shrink: 0; }
 .product-img { width: 100%; height: 100%; object-fit: cover; }
-.expire-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(220,38,38,0.9); color: white; font-size: 9px; text-align: center; font-weight: bold; padding: 2px; }
+.expire-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(220,38,38,0.9); color: white; font-size: 8px; text-align: center; font-weight: bold; padding: 1px; }
 
 .info-col { display: flex; flex-direction: column; min-width: 0; }
-.p-name { font-weight: 700; font-size: 15px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.p-loc { font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; }
-.p-qty { font-size: 13px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 4px; }
+.p-name { font-weight: 700; font-size: 14px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-loc { font-size: 10px; color: #6b7280; font-weight: 500; margin-bottom: 2px; }
+.p-qty { font-size: 12px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 4px; }
 .p-qty.low-stock { color: #ea580c; }
 
-.del-btn { background: #fee2e2; color: #ef4444; width: 36px; height: 36px; border-radius: 10px; border: none; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+/* AKSİYON BUTONLARI (SAĞ TARAFTAKİLER) */
+.card-actions { display: flex; gap: 6px; align-items: center; }
+.action-btn { 
+  width: 32px; 
+  height: 32px; 
+  border-radius: 8px; 
+  border: none; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  font-size: 14px; 
+  cursor: pointer; 
+  flex-shrink: 0; 
+}
+.decrease-btn { background: #eff6ff; color: #2563eb; font-weight: bold; }
+.del-btn { background: #fee2e2; color: #ef4444; }
 
 .empty-state, .loading-state { text-align: center; margin-top: 50px; color: #9ca3af; }
 .empty-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.5; filter: grayscale(1); }
 
-/* Alt navigasyonun altında kalmaması için boşluk */
 .bottom-spacer { height: 20px; }
 </style>
