@@ -1,164 +1,159 @@
 <template>
-  <div class="p-20">
-    <h2 class="page-title">📦 Ev Envanteri & Stok</h2>
-
-    <!-- YENİ MALZEME EKLEME FORMU -->
-    <div class="ekleme-formu">
-      <h3 class="section-title">➕ Yeni Ürün Girişi</h3>
-      
-      <!-- 1. ÜRÜN ADI -->
-      <div class="form-satir">
-        <label>Ürün Adı</label>
-        <input 
-          v-model="yeniMalzeme.ad" 
-          list="malzeme-onerileri" 
-          placeholder="Örn: Süt, Deterjan..." 
-          type="text" 
-          class="modern-input"
-          @change="birimOtomatikSec" 
-        >
-        <datalist id="malzeme-onerileri">
-          <option v-for="malzeme in malzemeKutuphanesi" :key="malzeme.id" :value="malzeme.ad">
-            {{ malzeme.kategori }}
-          </option>
-        </datalist>
+  <div class="page-wrapper">
+    
+    <!-- 1. SABİT ÜST BÖLÜM (HEADER + FORM) -->
+    <div class="fixed-header">
+      <div class="header-top">
+        <h2 class="page-title">📦 Kiler Stok</h2>
+        <span class="total-count">{{ kiler.length }} Ürün</span>
       </div>
 
-      <!-- 2. KONUM SEÇİMİ (Detaylı Liste) -->
-      <div class="form-satir">
-        <label>Konum</label>
-        <select v-model="yeniMalzeme.konum" class="modern-input">
-          <option v-for="yer in depoYerleri" :key="yer" :value="yer">{{ yer }}</option>
-        </select>
-      </div>
+      <!-- EKLEME FORMU (Scroll edilebilir) -->
+      <div class="ekleme-formu-scroll">
+        <div class="ekleme-formu">
+          <!-- Ürün Adı -->
+          <div class="form-satir">
+            <input 
+              v-model="yeniMalzeme.ad" 
+              list="malzeme-onerileri" 
+              placeholder="Ürün Adı (Örn: Süt)" 
+              type="text" 
+              class="modern-input big-text"
+              @change="birimOtomatikSec" 
+            >
+            <datalist id="malzeme-onerileri">
+              <option v-for="malzeme in malzemeKutuphanesi" :key="malzeme.id" :value="malzeme.ad">
+                {{ malzeme.kategori }}
+              </option>
+            </datalist>
+          </div>
 
-      <!-- 3. MİKTAR HESAPLAMA -->
-      <div class="hesap-kutusu">
-        <div class="girdi-grup">
-          <label>Paket</label>
-          <input v-model="yeniMalzeme.paketSayisi" type="number" placeholder="1" class="modern-input center-text">
-        </div>
-        <div class="carpim-isareti">✖</div>
-        <div class="girdi-grup">
-          <label>Miktar</label>
-          <input v-model="yeniMalzeme.paketAgirligi" type="number" placeholder="1" class="modern-input center-text">
-        </div>
-        <div class="girdi-grup">
-          <label>Birim</label>
-          <select v-model="yeniMalzeme.birim" class="modern-input">
-            <option value="adet">Adet</option>
-            <option value="rulo">Rulo</option>
-            <option value="paket">Paket</option>
-            <option value="gr">Gram</option>
-            <option value="kg">KG</option>
-            <option value="litre">Litre</option>
-            <option value="ml">Mililitre</option>
-          </select>
-        </div>
-      </div>
+          <!-- Konum -->
+          <div class="form-satir">
+            <select v-model="yeniMalzeme.konum" class="modern-input big-text">
+              <option disabled value="">Konum Seç</option>
+              <option v-for="yer in depoYerleri" :key="yer" :value="yer">{{ yer }}</option>
+            </select>
+          </div>
 
-      <!-- 4. SKT VE RESİM -->
-      <div class="form-satir">
-        <label>Son Kullanma Tarihi</label>
-        <input v-model="yeniMalzeme.skt" type="date" class="modern-input">
-      </div>
+          <!-- Miktar Alanları (Yan Yana) -->
+          <div class="hesap-kutusu">
+            <div class="girdi-grup">
+              <input v-model="yeniMalzeme.paketSayisi" type="number" placeholder="1" class="modern-input center-text big-text">
+              <label>Paket</label>
+            </div>
+            <div class="carpim-isareti">✖</div>
+            <div class="girdi-grup">
+              <input v-model="yeniMalzeme.paketAgirligi" type="number" placeholder="1" class="modern-input center-text big-text">
+              <label>Miktar</label>
+            </div>
+            <div class="girdi-grup genis">
+              <select v-model="yeniMalzeme.birim" class="modern-input big-text">
+                <option value="adet">Adet</option>
+                <option value="rulo">Rulo</option>
+                <option value="paket">Paket</option>
+                <option value="gr">Gr</option>
+                <option value="kg">KG</option>
+                <option value="litre">Lt</option>
+                <option value="ml">Ml</option>
+              </select>
+            </div>
+          </div>
 
-      <p class="ozet-bilgi">
-        Toplam Stok: <b>{{ toplamStokHesapla }} {{ yeniMalzeme.birim }}</b>
-        <br>
-        <small>Konum: {{ yeniMalzeme.konum }}</small>
-      </p>
-
-      <!-- RESİM BULUCU -->
-      <div class="form-satir">
-        <div class="resim-bulucu">
-          <input v-model="yeniMalzeme.resim" placeholder="Resim URL..." type="text" class="modern-input link-input">
-          <button @click="aiResimUret" class="ai-btn" :disabled="aiLoading">
-            {{ aiLoading ? 'Çiziliyor...' : '🎨 AI Resim' }}
-          </button>
-        </div>
-      </div>
-
-      <button @click="malzemeEkle" class="ekle-btn">✅ Kaydet</button>
-    </div>
-
-    <hr class="divider">
-
-    <!-- LİSTELEME VE FİLTRELEME -->
-    <h3 class="section-title">Envanter Listesi</h3>
-
-    <!-- KONUM FİLTRESİ -->
-    <div class="konum-filtresi">
-      <button 
-        :class="{ active: seciliKonumFiltresi === 'Hepsi' }" 
-        @click="seciliKonumFiltresi = 'Hepsi'"
-      >Tümü</button>
-      
-      <button 
-        v-for="yer in depoYerleri" 
-        :key="yer"
-        :class="{ active: seciliKonumFiltresi === yer }"
-        @click="seciliKonumFiltresi = yer"
-      >
-        {{ yer }}
-      </button>
-    </div>
-
-    <input v-model="listeArama" placeholder="🔍 Listede ara..." class="liste-arama-input">
-
-    <div class="list">
-      <div 
-        v-for="item in siraliVeFiltreliListe" 
-        :key="item.id" 
-        class="item-card"
-        :class="{ 'kritik-stok': stokAzMi(item), 'skt-gecti': sktGectiMi(item.son_kullanma_tarihi) }"
-      >
-        <img 
-          :src="item.resim_url || 'https://placehold.co/300x300?text=Urun'" 
-          @error="$event.target.src='https://placehold.co/300x300?text=Resim+Yok'"
-          class="thumb"
-        >
-        
-        <div class="info">
-          <div class="baslik-satir">
-            <h3>{{ item.malzeme_adi.toUpperCase() }}</h3>
-            <span class="konum-badge">{{ item.depo_yer || 'Belirsiz' }}</span>
+          <!-- Alt Satır: SKT, AI ve Kaydet -->
+          <div class="alt-kontrol-satiri">
+            <div class="date-wrapper">
+              <label>SKT:</label>
+              <input v-model="yeniMalzeme.skt" type="date" class="modern-input date-input">
+            </div>
+            
+            <button @click="aiResimUret" class="ai-btn" :disabled="aiLoading">
+              {{ aiLoading ? '⏳' : '🎨 AI Resim' }}
+            </button>
+            
+            <button @click="malzemeEkle" class="ekle-btn">KAYDET ✅</button>
           </div>
           
-          <div class="detaylar">
-            <span class="stok-badge">
-              {{ item.miktar }} {{ item.birim }}
-              <b v-if="stokAzMi(item)" class="uyari-yazisi">⚠️ AZ KALDI</b>
-            </span>
-            
-            <span v-if="item.son_kullanma_tarihi" class="skt-badge" :class="sktGectiMi(item.son_kullanma_tarihi) ? 'tehlike' : 'guvenli'">
-              SKT: {{ formatTarih(item.son_kullanma_tarihi) }}
-            </span>
-          </div>
-
-          <div class="aksiyon-butonlari">
-            <button @click="stokDuzenleModalAc(item)" class="kullan-btn">🔻 Kullan</button>
-            <button @click="malzemeSil(item.id)" class="sil-btn">Sil</button>
+          <div class="preview-area" v-if="yeniMalzeme.ad">
+             <span class="preview-text">Eklenecek: <b>{{ toplamStokHesapla }} {{ yeniMalzeme.birim }}</b></span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- MODAL -->
+    <!-- 2. KAYDIRILABİLİR LİSTE BÖLÜMÜ -->
+    <div class="scrollable-content">
+      
+      <!-- FİLTRELER (Sadeleştirilmiş Liste) -->
+      <div class="konum-filtresi">
+        <button :class="{ active: seciliKonumFiltresi === 'Hepsi' }" @click="seciliKonumFiltresi = 'Hepsi'">Tümü</button>
+        <button v-for="yer in filtreSecenekleri" :key="yer" :class="{ active: seciliKonumFiltresi === yer }" @click="seciliKonumFiltresi = yer">{{ yer }}</button>
+      </div>
+
+      <input v-model="listeArama" placeholder="🔍 Envanterde ara..." class="liste-arama-input big-text">
+
+      <!-- ÜRÜN LİSTESİ -->
+      <div class="list">
+        <div 
+          v-for="item in siraliVeFiltreliListe" 
+          :key="item.id" 
+          class="item-card"
+          :class="{ 'kritik-stok': stokAzMi(item), 'skt-gecti': sktGectiMi(item.son_kullanma_tarihi) }"
+        >
+          <img 
+            :src="item.resim_url || 'https://placehold.co/300x300?text=Urun'" 
+            @error="$event.target.src='https://placehold.co/300x300?text=Resim+Yok'"
+            class="thumb"
+          >
+          
+          <div class="info">
+            <div class="baslik-satir">
+              <h3>{{ item.malzeme_adi.toUpperCase() }}</h3>
+              <span class="konum-badge">{{ item.depo_yer || '?' }}</span>
+            </div>
+            
+            <div class="detaylar">
+              <span class="stok-badge">
+                {{ item.miktar }} {{ item.birim }}
+                <b v-if="stokAzMi(item)" class="uyari-yazisi">⚠️ AZ KALDI</b>
+              </span>
+              
+              <span v-if="item.son_kullanma_tarihi" class="skt-badge" :class="sktGectiMi(item.son_kullanma_tarihi) ? 'tehlike' : 'guvenli'">
+                SKT: {{ formatTarih(item.son_kullanma_tarihi) }}
+              </span>
+            </div>
+
+            <div class="aksiyon-butonlari">
+              <button @click="stokDuzenleModalAc(item)" class="kullan-btn">Kullan</button>
+              <button @click="malzemeSil(item.id)" class="sil-btn">Sil</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Liste boşsa uyarı -->
+        <div v-if="siraliVeFiltreliListe.length === 0" class="bos-liste">
+          <p>Bu konumda ürün yok 🤷‍♂️</p>
+        </div>
+      </div>
+      
+      <div class="bottom-spacer"></div>
+    </div>
+
+    <!-- MODAL (STOK DÜŞME) -->
     <div v-if="secilenUrun" class="modal-overlay" @click.self="modalKapat">
       <div class="modal-content">
         <h3>🔻 Stok Tüketimi</h3>
-        <p><b>{{ secilenUrun.malzeme_adi.toUpperCase() }}</b> kullanılıyor.</p>
+        <p class="big-text"><b>{{ secilenUrun.malzeme_adi.toUpperCase() }}</b></p>
         <div class="modal-input-area">
           <label>Ne kadar kullandın?</label>
           <div class="input-group">
             <input type="number" v-model="dusulecekMiktar" class="buyuk-input" placeholder="0">
-            <span>{{ secilenUrun.birim }}</span>
+            <span class="big-text">{{ secilenUrun.birim }}</span>
           </div>
         </div>
         <div class="modal-actions">
           <button @click="modalKapat" class="iptal-btn">İptal</button>
-          <button @click="stoktanDus" class="onay-btn">✅ Düş</button>
+          <button @click="stoktanDus" class="onay-btn">Onayla ✅</button>
         </div>
       </div>
     </div>
@@ -178,20 +173,17 @@ const dusulecekMiktar = ref(1)
 const seciliKonumFiltresi = ref("Hepsi")
 const aiLoading = ref(false)
 
-// --- GÜNCELLENMİŞ DEPO YERLERİ ---
+// --- DETAYLI DEPO YERLERİ (EKLEME FORMU İÇİN) ---
 const depoYerleri = [
-  "Buzdolabı", 
-  "Buzdolabı Üst Raf",
-  "Buzdolabı Ara Raf",
-  "Buzdolabı Alt Raf",
-  "Buzdolabı Üst Göz",
-  "Buzdolabı Kapak",
-  "Kiler", 
-  "Balkondolap", 
-  "Ezeldolap", 
-  "Yatakdolap", 
-  "Banyo", 
-  "Ivırzıvır"
+  "Buzdolabı Üst Raf", "Buzdolabı Ara Raf", "Buzdolabı Alt Raf", 
+  "Buzdolabı Üst Göz", "Buzdolabı Kapak", "Buzdolabı Sebzelik",
+  "Kiler", "Balkondolap", "Ezeldolap", "Yatakdolap", "Banyo", "Ivırzıvır"
+]
+
+// --- SADELEŞTİRİLMİŞ FİLTRELER (LİSTE İÇİN) ---
+// PAYLAŞTIĞIN KODDA EKSİK OLAN KISIM BURASIYDI, EKLENDİ:
+const filtreSecenekleri = [
+  "Buzdolabı", "Kiler", "Balkondolap", "Ezeldolap", "Yatakdolap", "Banyo", "Ivırzıvır"
 ]
 
 const yeniMalzeme = ref({ 
@@ -202,7 +194,7 @@ const toplamStokHesapla = computed(() => {
   return yeniMalzeme.value.paketSayisi * yeniMalzeme.value.paketAgirligi
 })
 
-// --- AKILLI FİLTRELEME ALGORİTMASI ---
+// --- SIRALAMA VE FİLTRELEME MANTIĞI ---
 const siraliVeFiltreliListe = computed(() => {
   let liste = kiler.value
 
@@ -211,6 +203,7 @@ const siraliVeFiltreliListe = computed(() => {
   }
 
   if (seciliKonumFiltresi.value !== 'Hepsi') {
+    // ÖZEL MANTIK: "Buzdolabı" seçilirse içinde "Buzdolabı" geçen HER YERİ getir.
     if (seciliKonumFiltresi.value === 'Buzdolabı') {
       liste = liste.filter(i => i.depo_yer && i.depo_yer.includes('Buzdolabı'))
     } else {
@@ -221,10 +214,10 @@ const siraliVeFiltreliListe = computed(() => {
   return liste.sort((a, b) => {
     const aKritik = stokAzMi(a)
     const bKritik = stokAzMi(b)
-    
+    // Kritikler en üste
     if (aKritik && !bKritik) return -1
     if (!aKritik && bKritik) return 1
-
+    // Sonra SKT'ye göre (Yaklaşanlar üste)
     if (a.son_kullanma_tarihi && b.son_kullanma_tarihi) {
       return new Date(a.son_kullanma_tarihi) - new Date(b.son_kullanma_tarihi)
     }
@@ -235,16 +228,9 @@ const siraliVeFiltreliListe = computed(() => {
 function stokAzMi(item) {
   const miktar = parseFloat(item.miktar)
   const birim = item.birim.toLowerCase()
-
-  if (['adet', 'paket', 'rulo', 'kavanoz', 'şişe'].includes(birim)) {
-    return miktar <= 3
-  }
-  if (['gr', 'ml'].includes(birim)) {
-    return miktar <= 500
-  }
-  if (['kg', 'litre'].includes(birim)) {
-    return miktar <= 0.5
-  }
+  if (['adet', 'paket', 'rulo', 'kavanoz', 'şişe'].includes(birim)) return miktar <= 3
+  if (['gr', 'ml'].includes(birim)) return miktar <= 500
+  if (['kg', 'litre', 'lt'].includes(birim)) return miktar <= 0.5
   return false
 }
 
@@ -267,6 +253,12 @@ function birimOtomatikSec() {
 
 async function malzemeEkle() {
   if (!yeniMalzeme.value.ad) return alert("İsim yazmalısın!")
+  
+  // Resim yoksa otomatik AI çalıştır
+  if (!yeniMalzeme.value.resim) {
+    await aiResimUret(true) // true: sessiz mod (beklemeden kaydetmek için gerekirse)
+  }
+
   const { error } = await supabase.from('kiler').insert({
     malzeme_adi: yeniMalzeme.value.ad.toLowerCase(),
     miktar: toplamStokHesapla.value, 
@@ -275,8 +267,9 @@ async function malzemeEkle() {
     resim_url: yeniMalzeme.value.resim || 'https://placehold.co/300x300?text=' + yeniMalzeme.value.ad,
     depo_yer: yeniMalzeme.value.konum
   })
+  
   if (!error) {
-    alert("Stok Eklendi!")
+    alert("✅ Eklendi")
     const eskiKonum = yeniMalzeme.value.konum
     yeniMalzeme.value = { ad: '', paketSayisi: 1, paketAgirligi: 1, birim: 'adet', skt: '', resim: '', konum: eskiKonum }
     getKiler()
@@ -300,27 +293,19 @@ async function stoktanDus() {
   if (!error) { modalKapat(); getKiler() } else { alert("Hata oluştu.") }
 }
 
-function aiResimUret() {
-  if(!yeniMalzeme.value.ad) return alert("Önce ürün adını yazmalısın!");
+async function aiResimUret(sessiz = false) {
+  if(!yeniMalzeme.value.ad) { if(!sessiz) alert("Önce ürün adını yazmalısın!"); return; }
   aiLoading.value = true
-  const trToEn = {
-    'domates': 'tomato', 'biber': 'pepper', 'patlıcan': 'eggplant', 'soğan': 'onion', 'sarımsak': 'garlic',
-    'patates': 'potato', 'havuç': 'carrot', 'kabak': 'zucchini', 'ıspanak': 'spinach', 'limon': 'lemon',
-    'elma': 'apple', 'muz': 'banana', 'çilek': 'strawberry', 'portakal': 'orange', 'karpuz': 'watermelon',
-    'pirinç': 'rice', 'mercimek': 'lentil', 'nohut': 'chickpea', 'fasulye': 'bean', 'makarna': 'pasta',
-    'süt': 'milk', 'yumurta': 'egg', 'peynir': 'cheese', 'yoğurt': 'yogurt', 'tereyağı': 'butter',
-    'ekmek': 'bread', 'un': 'flour', 'şeker': 'sugar', 'tuz': 'salt', 'yağ': 'oil', 'salça': 'tomato paste',
-    'zeytin': 'olive', 'bal': 'honey', 'reçel': 'jam', 'çay': 'tea', 'kahve': 'coffee', 'su': 'water',
-    'deterjan': 'detergent', 'sabun': 'soap', 'şampuan': 'shampoo', 'peçete': 'napkin',
-    'tuvalet kağıdı': 'toilet paper', 'kağıt havlu': 'paper towel', 'çamaşır suyu': 'bleach',
-    'diş macunu': 'toothpaste', 'diş fırçası': 'toothbrush'
-  }
+  const trToEn = { 'domates': 'tomato', 'biber': 'pepper', 'süt': 'milk', 'yumurta': 'egg', 'deterjan': 'detergent', 'salça': 'tomato paste' } 
   const arananKelime = yeniMalzeme.value.ad.toLowerCase().trim()
   const ingilizceIsim = trToEn[arananKelime] || arananKelime
+  // Prompt: Yüksek kalite, stüdyo ışığı
   const prompt = `${ingilizceIsim} product photography, sharp focus, highly detailed, realistic white background, studio lighting, 8k`
   const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=300&height=300&nologo=true`
   yeniMalzeme.value.resim = aiUrl
-  setTimeout(() => { aiLoading.value = false }, 1000)
+  // Resim yüklenene kadar biraz bekle
+  await new Promise(r => setTimeout(r, 800))
+  aiLoading.value = false
 }
 
 function formatTarih(tarihStr) { if(!tarihStr) return ''; return new Date(tarihStr).toLocaleDateString('tr-TR') }
@@ -330,87 +315,115 @@ onMounted(() => { getKiler(); getMalzemeKutuphanesi() })
 </script>
 
 <style scoped>
-.p-20 { padding: 20px; padding-bottom: 80px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+/* SAYFA YAPISI */
+.page-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden; 
+  background: #f8f9fa;
+}
 
-.page-title { font-size: 24px; font-weight: 800; color: #111; margin-bottom: 20px; letter-spacing: -0.5px; }
-.section-title { font-size: 18px; font-weight: 700; color: #333; margin: 15px 0; }
+/* 1. SABİT ÜST BÖLÜM (HEADER) - MODERN VE SABİT */
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 48vh; /* Ekranın yaklaşık yarısı */
+  background: #ffffff;
+  z-index: 50; 
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  display: flex;
+  flex-direction: column;
+}
 
-.ekleme-formu { background: #f9fafb; padding: 20px; border-radius: 16px; margin-bottom: 25px; border: 1px solid #edf2f7; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+.header-top {
+  padding: 15px 20px 5px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
-.form-satir { margin-bottom: 12px; }
-.form-satir label { display: block; font-weight: 600; margin-bottom: 6px; color: #4a5568; font-size: 13px; }
+.page-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0;
+  color: #1a202c;
+  letter-spacing: -0.5px;
+}
 
-/* Modern Inputlar */
-.modern-input { 
-  width: 100%; 
-  padding: 12px 16px; 
-  border: 1px solid #e2e8f0; 
-  border-radius: 12px; 
-  background: white;
-  font-size: 15px;
+.total-count {
+  font-size: 12px;
+  background: #edf2f7;
+  padding: 4px 8px;
+  border-radius: 12px;
+  color: #4a5568;
+  font-weight: 600;
+}
+
+/* FORM ALANI - Kendi içinde kayabilir */
+.ekleme-formu-scroll {
+  flex: 1;
+  overflow-y: auto; /* Küçük ekranlarda form sığmazsa kaydır */
+  padding: 10px 20px 20px 20px;
+}
+
+.ekleme-formu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-satir { margin-bottom: 5px; }
+
+/* BÜYÜK YAZILAR (Inputlar) */
+.big-text { font-size: 16px !important; padding: 12px !important; font-weight: 600; }
+
+.modern-input {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f7fafc;
   box-sizing: border-box;
   transition: all 0.2s;
   color: #2d3748;
 }
-.modern-input:focus { border-color: #000; outline: none; box-shadow: 0 0 0 2px rgba(0,0,0,0.05); }
-.center-text { text-align: center; font-weight: bold; }
+.modern-input:focus { border-color: #2d3748; background: #fff; outline: none; }
 
-.hesap-kutusu { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 12px; background: white; padding: 12px; border-radius: 12px; border: 1px solid #edf2f7; }
-.girdi-grup { flex: 1; display: flex; flex-direction: column; }
-.girdi-grup label { font-size: 11px; margin-bottom: 4px; font-weight: 700; text-align: center; color: #718096;}
-.carpim-isareti { font-size: 16px; color: #cbd5e0; padding-bottom: 12px; }
+.hesap-kutusu { display: flex; align-items: flex-end; gap: 5px; }
+.girdi-grup { flex: 1; text-align: center; }
+.girdi-grup label { font-size: 10px; font-weight: 700; color: #718096; display: block; margin-top: 2px;}
+.genis { flex: 1.5; }
+.carpim-isareti { font-size: 16px; padding-bottom: 22px; color: #cbd5e0; }
 
-.ozet-bilgi { background: #ebf8ff; color: #2b6cb0; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #bee3f8; margin-bottom: 15px; font-size: 14px;}
+.alt-kontrol-satiri { display: flex; gap: 8px; margin-top: 5px; align-items: flex-end; }
+.date-wrapper { flex: 2; }
+.date-wrapper label { font-size: 10px; font-weight: 700; color: #718096; display: block; margin-bottom: 2px;}
+.ai-btn { flex: 1; background: #6f42c1; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; height: 46px; font-size: 13px;}
+.ekle-btn { flex: 2; background: #1a202c; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 16px; height: 46px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
 
-.resim-bulucu { display: flex; gap: 8px; }
-.link-input { flex: 1; }
-.ai-btn { 
-  background: #6f42c1; 
-  color: white; 
-  border: none; 
-  border-radius: 10px; 
-  padding: 0 16px; 
-  cursor: pointer; 
-  font-weight: 600; 
-  font-size: 13px;
-  box-shadow: 0 2px 4px rgba(111, 66, 193, 0.2);
-  transition: transform 0.1s;
-}
-.ai-btn:active { transform: scale(0.96); }
+.preview-area { display: flex; align-items: center; gap: 10px; background: #ebf8ff; padding: 8px; border-radius: 10px; margin-top: 5px; }
+.preview-img { width: 30px; height: 30px; border-radius: 5px; object-fit: cover; }
+.preview-text { font-size: 12px; color: #2b6cb0; }
 
-.ekle-btn { 
-  width: 100%; 
-  background: #1a202c; 
-  color: white; 
-  padding: 14px; 
-  font-weight: 700; 
-  cursor: pointer; 
-  border: none; 
-  border-radius: 12px; 
-  font-size: 16px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  transition: background 0.2s;
-}
-.ekle-btn:active { background: #000; transform: scale(0.98); }
-
-.divider { border: 0; border-top: 1px solid #edf2f7; margin: 30px 0; }
-
-.liste-arama-input { 
-  width: 100%; 
-  padding: 12px 16px; 
-  border: 1px solid #e2e8f0; 
-  border-radius: 12px; 
-  margin-bottom: 20px; 
-  box-sizing: border-box; 
-  font-size: 15px;
-  background-color: #f7fafc;
+/* 2. KAYDIRILABİLİR LİSTE BÖLÜMÜ */
+.scrollable-content {
+  margin-top: 48vh; /* Header yüksekliği kadar boşluk */
+  height: calc(52vh - 80px); /* Kalan alan */
+  overflow-y: auto; /* Sadece burası kayar */
+  padding: 15px;
+  padding-bottom: 100px;
+  box-sizing: border-box;
 }
 
-/* KONUM FİLTRESİ */
-.konum-filtresi { display: flex; overflow-x: auto; gap: 8px; margin-bottom: 20px; padding-bottom: 8px; scrollbar-width: none; }
+/* FİLTRELER */
+.konum-filtresi { display: flex; overflow-x: auto; gap: 8px; margin-bottom: 15px; padding-bottom: 5px; scrollbar-width: none; }
 .konum-filtresi::-webkit-scrollbar { display: none; }
 .konum-filtresi button { 
-  padding: 8px 16px; 
+  padding: 8px 14px; 
   border: 1px solid #e2e8f0; 
   border-radius: 20px; 
   background: white; 
@@ -418,82 +431,59 @@ onMounted(() => { getKiler(); getMalzemeKutuphanesi() })
   font-size: 13px; 
   cursor: pointer; 
   color: #4a5568; 
-  font-weight: 500;
-  transition: all 0.2s;
+  font-weight: 600;
 }
-.konum-filtresi button.active { background: #1a202c; color: white; border-color: #1a202c; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.konum-filtresi button.active { background: #1a202c; color: white; border-color: #1a202c; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
-/* LİSTE KARTLARI */
+.liste-arama-input { margin-bottom: 15px; border: 2px solid #e2e8f0; background: white; }
+
+/* KARTLAR */
 .item-card { 
-  display: flex; 
-  align-items: flex-start; 
-  border: 1px solid #f0f0f0; /* Soft border */
-  margin-bottom: 16px; 
-  padding: 16px; 
-  border-radius: 16px; 
-  background: white; 
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03); /* Modern soft shadow */
+  display: flex; align-items: center; 
+  background: white; padding: 12px; margin-bottom: 12px; 
+  border-radius: 16px; border: 1px solid #f0f0f0; 
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02); 
   transition: transform 0.1s;
 }
 .thumb { 
-  width: 90px; /* BÜYÜTÜLDÜ */
-  height: 90px; /* BÜYÜTÜLDÜ */
-  border-radius: 12px; 
-  margin-right: 16px; 
-  object-fit: cover; 
-  border: 1px solid #edf2f7;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  width: 90px; height: 90px; /* BÜYÜK RESİM */
+  border-radius: 12px; margin-right: 15px; 
+  object-fit: cover; border: 1px solid #edf2f7; 
+  background-color: #f7fafc;
 }
 .info { flex: 1; min-width: 0; }
-.baslik-satir { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-.info h3 { margin: 0; font-size: 17px; color: #1a202c; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;}
-.konum-badge { font-size: 10px; background: #edf2f7; padding: 3px 8px; border-radius: 6px; color: #4a5568; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;}
+.baslik-satir { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.baslik-satir h3 { margin: 0; font-size: 17px; color: #1a202c; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 65%;}
+.konum-badge { font-size: 10px; background: #edf2f7; padding: 3px 6px; border-radius: 6px; color: #4a5568; font-weight: 700; text-transform: uppercase; }
 
-.detaylar { margin-bottom: 12px; }
-.stok-badge { font-weight: 700; font-size: 15px; color: #2d3748; display: block; margin-bottom: 4px; }
-.uyari-yazisi { color: #e53e3e; font-weight: 800; font-size: 11px; margin-left: 6px; background: #fff5f5; padding: 2px 6px; border-radius: 4px;}
+.stok-badge { font-size: 15px; font-weight: 700; display: block; margin: 4px 0; color: #2d3748; }
+.uyari-yazisi { color: #e53e3e; font-size: 11px; background: #fff5f5; padding: 2px 5px; border-radius: 4px; margin-left: 5px; }
 
-.skt-badge { font-size: 11px; padding: 3px 8px; border-radius: 6px; display: inline-block; width: fit-content; font-weight: 600; }
+.skt-badge { font-size: 11px; padding: 3px 8px; border-radius: 6px; display: inline-block; width: fit-content; font-weight: 600; margin-bottom: 8px;}
 .skt-badge.guvenli { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
 .skt-badge.tehlike { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
 
-/* MODERN AKSİYON BUTONLARI */
-.aksiyon-butonlari { display: flex; gap: 8px; margin-top: auto; }
-.kullan-btn, .sil-btn {
-  flex: 1;
-  padding: 8px 12px;
-  font-size: 12px;
-  border-radius: 8px;
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.1s;
-}
-
-.kullan-btn {
-  background: #edf2f7;
-  color: #2d3748;
-}
-.sil-btn {
-  background: #fff5f5;
-  color: #e53e3e;
-  max-width: 60px;
-}
+.aksiyon-butonlari { display: flex; gap: 8px; }
+.kullan-btn, .sil-btn { flex: 1; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 8px; border: none; cursor: pointer; transition: transform 0.1s;}
+.kullan-btn { background: #edf2f7; color: #2d3748; }
+.sil-btn { background: #fff5f5; color: #e53e3e; max-width: 60px; }
 .kullan-btn:active, .sil-btn:active { transform: scale(0.95); }
 
-/* KRİTİK STOK STİLİ */
+/* KRİTİK STİL */
 .item-card.kritik-stok { border: 1px solid #fc8181; background: #fffafa; }
-.item-card.skt-gecti { opacity: 0.7; filter: grayscale(50%); }
+.item-card.skt-gecti { opacity: 0.6; filter: grayscale(100%); }
+
+.bos-liste { text-align: center; padding: 20px; color: #a0aec0; font-weight: 600; }
+.bottom-spacer { height: 50px; }
 
 /* MODAL */
-.modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index: 1000; backdrop-filter: blur(2px); }
-.modal-content { background: white; padding: 24px; border-radius: 20px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-.modal-input-area { margin: 20px 0; }
-.input-group { display: flex; align-items: center; justify-content: center; gap: 10px; }
-.buyuk-input { width: 80px; padding: 12px; font-size: 24px; text-align: center; border: 2px solid #edf2f7; border-radius: 12px; font-weight: bold; color: #2d3748;}
+.modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index: 2000; backdrop-filter: blur(3px); }
+.modal-content { background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+.buyuk-input { width: 100px; font-size: 30px; text-align: center; border: 2px solid #e2e8f0; border-radius: 12px; padding: 10px; font-weight: bold; color: #2d3748; }
 .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-.iptal-btn { flex: 1; background: #edf2f7; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; color: #4a5568; }
-.onay-btn { flex: 1; background: #1a202c; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+.iptal-btn, .onay-btn { flex: 1; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; font-size: 15px;}
+.iptal-btn { background: #edf2f7; color: #4a5568; }
+.onay-btn { background: #1a202c; color: white; }
 
 @keyframes blink { 50% { opacity: 0.5; } }
 </style>
