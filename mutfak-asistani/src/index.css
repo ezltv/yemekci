@@ -1,0 +1,39 @@
+/* Tüm sayfa için modern sıfırlama */
+:root {
+  touch-action: pan-x pan-y;
+  -webkit-font-smoothing: antialiased;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden; /* Yan kaymayı engelle */
+  
+  /* Sayfayı aşağı çekince yenileme efektini kapat (Native hissi için) */
+  overscroll-behavior-y: none; 
+  
+  /* Mobil font ayarları */
+  -webkit-text-size-adjust: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Tıklayınca oluşan mavi kutuyu kaldır */
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+  user-select: none; /* Yazıların seçilmesini engelle (Uygulama gibi olsun) */
+}
+
+/* Input ve Buttonlara dokunulabilirliği geri aç */
+input, textarea, button, select {
+  user-select: text;
+}
+
+/* Resimlerin taşmasını engelle */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
