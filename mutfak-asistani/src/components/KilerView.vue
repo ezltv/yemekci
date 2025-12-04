@@ -24,7 +24,7 @@
         </datalist>
       </div>
 
-      <!-- 2. KONUM SEÇİMİ -->
+      <!-- 2. KONUM SEÇİMİ (Detaylı Liste Buradan Seçiliyor) -->
       <div class="form-satir">
         <label>Nereye Koyacaksın?</label>
         <select v-model="yeniMalzeme.konum" class="tam-genislik">
@@ -69,14 +69,13 @@
         <small>Konum: {{ yeniMalzeme.konum }}</small>
       </p>
 
-      <!-- RESİM BULUCU (GÜNCELLENDİ: AI EKLENDİ) -->
+      <!-- RESİM BULUCU (SADECE AI KALDI) -->
       <div class="form-satir">
         <div class="resim-bulucu">
           <input v-model="yeniMalzeme.resim" placeholder="Resim URL..." type="text" class="link-input">
-          <button @click="googleResimAra(yeniMalzeme.ad)" class="google-btn" title="Google'da Ara">🔍 Google</button>
-          <button @click="aiResimUret" class="ai-btn" title="Yapay Zeka ile Üret">🤖 AI</button>
+          <button @click="aiResimUret" class="ai-btn" title="Yapay Zeka ile Üret">🤖 AI Resim Çiz</button>
         </div>
-        <small v-if="aiLoading" style="color: purple;">Yapay zeka (İngilizce çeviriyle) resim çiziyor...</small>
+        <small v-if="aiLoading" style="color: purple;">Yapay zeka yüksek çözünürlüklü çiziyor...</small>
       </div>
 
       <button @click="malzemeEkle" class="ekle-btn">✅ Depoya Kaydet</button>
@@ -87,15 +86,16 @@
     <!-- LİSTELEME VE FİLTRELEME -->
     <h3>Evdeki Envanter</h3>
 
-    <!-- Depo Yeri Filtresi (Tablar) -->
+    <!-- KONUM FİLTRESİ (SADELEŞTİRİLMİŞ TABLAR) -->
     <div class="konum-filtresi">
       <button 
         :class="{ active: seciliKonumFiltresi === 'Hepsi' }" 
         @click="seciliKonumFiltresi = 'Hepsi'"
       >Tümü</button>
       
+      <!-- Burada depoYerleri yerine sadeleştirilmiş filtre listesini kullanıyoruz -->
       <button 
-        v-for="yer in depoYerleri" 
+        v-for="yer in filtreSecenekleri" 
         :key="yer"
         :class="{ active: seciliKonumFiltresi === yer }"
         @click="seciliKonumFiltresi = yer"
@@ -113,9 +113,10 @@
         class="item-card"
         :class="{ 'kritik-stok': stokAzMi(item), 'skt-gecti': sktGectiMi(item.son_kullanma_tarihi) }"
       >
+        <!-- Resim boyutunu ve kalitesini artırdık -->
         <img 
-          :src="item.resim_url || 'https://placehold.co/100x100?text=Urun'" 
-          @error="$event.target.src='https://placehold.co/100x100?text=Resim+Yok'"
+          :src="item.resim_url || 'https://placehold.co/300x300?text=Urun'" 
+          @error="$event.target.src='https://placehold.co/300x300?text=Resim+Yok'"
           class="thumb"
         >
         
@@ -180,12 +181,23 @@ const dusulecekMiktar = ref(1)
 const seciliKonumFiltresi = ref("Hepsi")
 const aiLoading = ref(false)
 
-// --- DEPO YERLERİ ---
+// --- DEPO YERLERİ (EKLEME FORMU İÇİN DETAYLI LİSTE) ---
 const depoYerleri = [
   "Buzdolabı",
   "Buzdolabı Üst Raf",
   "Buzdolabı Ara Raf",
   "Buzdolabı Alt Raf",
+  "Kiler", 
+  "Balkondolap", 
+  "Ezeldolap", 
+  "Yatakdolap", 
+  "Banyo", 
+  "Ivırzıvır"
+]
+
+// --- FİLTRE SEÇENEKLERİ (LİSTELEME İÇİN SADELEŞTİRİLMİŞ) ---
+const filtreSecenekleri = [
+  "Buzdolabı", // Bu artık tüm buzdolabı raflarını kapsayacak
   "Kiler", 
   "Balkondolap", 
   "Ezeldolap", 
@@ -202,7 +214,7 @@ const toplamStokHesapla = computed(() => {
   return yeniMalzeme.value.paketSayisi * yeniMalzeme.value.paketAgirligi
 })
 
-// --- KRİTİK ALGORİTMA ---
+// --- GÜNCELLENMİŞ FİLTRELEME ALGORİTMASI ---
 const siraliVeFiltreliListe = computed(() => {
   let liste = kiler.value
 
@@ -210,8 +222,15 @@ const siraliVeFiltreliListe = computed(() => {
     liste = liste.filter(i => i.malzeme_adi.toLowerCase().includes(listeArama.value.toLowerCase()))
   }
 
+  // ÖZEL FİLTRE MANTIĞI
   if (seciliKonumFiltresi.value !== 'Hepsi') {
-    liste = liste.filter(i => i.depo_yer === seciliKonumFiltresi.value)
+    if (seciliKonumFiltresi.value === 'Buzdolabı') {
+      // Eğer "Buzdolabı" seçildiyse, içinde "Buzdolabı" kelimesi geçen (Üst, Alt, Ara raf dahil) hepsini getir
+      liste = liste.filter(i => i.depo_yer && i.depo_yer.includes('Buzdolabı'))
+    } else {
+      // Diğerleri için birebir eşleşme
+      liste = liste.filter(i => i.depo_yer === seciliKonumFiltresi.value)
+    }
   }
 
   return liste.sort((a, b) => {
@@ -268,7 +287,8 @@ async function malzemeEkle() {
     miktar: toplamStokHesapla.value, 
     birim: yeniMalzeme.value.birim,
     son_kullanma_tarihi: yeniMalzeme.value.skt || null,
-    resim_url: yeniMalzeme.value.resim || 'https://placehold.co/100x100?text=' + yeniMalzeme.value.ad,
+    // Varsayılan resim boyutunu 300x300 yaptık (daha net)
+    resim_url: yeniMalzeme.value.resim || 'https://placehold.co/300x300?text=' + yeniMalzeme.value.ad,
     depo_yer: yeniMalzeme.value.konum
   })
   if (!error) {
@@ -296,19 +316,12 @@ async function stoktanDus() {
   if (!error) { modalKapat(); getKiler() } else { alert("Hata oluştu.") }
 }
 
-function googleResimAra(kelime) {
-  if(!kelime) return alert("Önce ürün adını yazmalısın!");
-  const url = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(kelime)}`;
-  window.open(url, '_blank');
-}
-
 // --- AKILLI ÇEVİRİ VE AI RESİM ÜRETME ---
 function aiResimUret() {
   if(!yeniMalzeme.value.ad) return alert("Önce ürün adını yazmalısın!");
   
   aiLoading.value = true
 
-  // Genişletilmiş Türkçe-İngilizce Sözlük (En yaygın ürünler)
   const trToEn = {
     'domates': 'tomato', 'biber': 'pepper', 'patlıcan': 'eggplant', 'soğan': 'onion', 'sarımsak': 'garlic',
     'patates': 'potato', 'havuç': 'carrot', 'kabak': 'zucchini', 'ıspanak': 'spinach', 'limon': 'lemon',
@@ -322,15 +335,13 @@ function aiResimUret() {
     'diş macunu': 'toothpaste', 'diş fırçası': 'toothbrush'
   }
 
-  // Girilen kelimeyi küçük harfe çevirip boşluklarını al
   const arananKelime = yeniMalzeme.value.ad.toLowerCase().trim()
-  
-  // Sözlükte varsa İngilizcesini al, yoksa Türkçesini kullan
   const ingilizceIsim = trToEn[arananKelime] || arananKelime
   
-  // Daha kaliteli prompt oluşturuyoruz (Stüdyo ışığı, gerçekçi vb.)
-  const prompt = `${ingilizceIsim} product photography realistic white background, studio lighting, high quality, 4k`
-  const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`
+  // Prompt güncellendi: Sharp focus (keskin odak) ve 8k eklendi
+  const prompt = `${ingilizceIsim} product photography, sharp focus, highly detailed, realistic white background, studio lighting, 8k`
+  // URL'ye genişlik ve yükseklik parametreleri eklendi (destekleyen modeller için)
+  const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=300&height=300&nologo=true`
   
   yeniMalzeme.value.resim = aiUrl
   
@@ -360,8 +371,17 @@ onMounted(() => { getKiler(); getMalzemeKutuphanesi() })
 .ozet-bilgi { background: #e8f5e9; color: #000; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #c8e6c9; margin-bottom: 15px; font-weight: bold;}
 .resim-bulucu { display: flex; gap: 5px; }
 .link-input { flex: 1; padding: 10px; border: 2px solid #000; border-radius: 6px; box-sizing: border-box; }
-.google-btn { background: #4285F4; color: white; border: none; border-radius: 6px; padding: 0 15px; cursor: pointer; font-weight: bold; }
-.ai-btn { background: #6f42c1; color: white; border: none; border-radius: 6px; padding: 0 15px; cursor: pointer; font-weight: bold; } /* AI BUTONU İÇİN MOR RENK */
+.ai-btn { 
+  width: 100%;
+  background: #6f42c1; 
+  color: white; 
+  border: none; 
+  border-radius: 6px; 
+  padding: 10px 15px; 
+  cursor: pointer; 
+  font-weight: bold; 
+  font-size: 14px;
+}
 .ekle-btn { width: 100%; background: #000; color: white; padding: 14px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; font-size: 16px;}
 .liste-arama-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; box-sizing: border-box; }
 
@@ -373,7 +393,16 @@ onMounted(() => { getKiler(); getMalzemeKutuphanesi() })
 
 /* LİSTE KARTLARI */
 .item-card { display: flex; align-items: flex-start; border: 2px solid #eee; margin-bottom: 12px; padding: 12px; border-radius: 10px; background: white; transition: 0.3s; }
-.thumb { width: 60px; height: 60px; border-radius: 8px; margin-right: 15px; object-fit: cover; border: 1px solid #ddd; }
+.thumb { 
+  width: 70px; /* Boyut biraz büyütüldü */
+  height: 70px; 
+  border-radius: 8px; 
+  margin-right: 15px; 
+  object-fit: cover; 
+  border: 2px solid #ddd; /* Kenarlık kalınlaştırıldı */
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Hafif gölge ile netlik hissi */
+  background-color: white;
+}
 .info { flex: 1; }
 .baslik-satir { display: flex; justify-content: space-between; align-items: flex-start; }
 .info h3 { margin: 0 0 5px 0; font-size: 16px; color: #000; font-weight: 800;}
@@ -388,7 +417,7 @@ onMounted(() => { getKiler(); getMalzemeKutuphanesi() })
 
 /* KRİTİK STOK STİLİ */
 .item-card.kritik-stok { border: 2px solid #ef9a9a; background: #fff8f8; }
-.item-card.skt-gecti { opacity: 0.7; border: 2px solid #ccc; background: #f0f0f0; }
+.item-card.skt-gecti { opacity: 0.8; border: 2px solid #ccc; background: #f0f0f0; } /* Opaklık azaltıldı, flu görünmesin diye */
 
 .aksiyon-butonlari { display: flex; gap: 10px; margin-top: 10px; }
 .kullan-btn { flex: 2; background: #e0e0e0; border: 1px solid #999; border-radius: 6px; padding: 8px; font-weight: bold; cursor: pointer; color: #333; }
