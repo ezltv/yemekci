@@ -96,12 +96,17 @@
 
 <script setup>
 import { ref } from 'vue'
-// DÜZELTME: Supabase import yolu kontrol edildi
 import { supabase } from '../supabase'
 
 const mod = ref('tarif') 
 const loading = ref(false)
-const apiKey = "" // API KEY BURAYA
+
+// ------------------------------------------------------------------
+// 🔑 BURAYI DÜZENLE: Kendi aldığın API anahtarını tırnak içine yapıştır.
+// Örnek: const apiKey = "AIzaSyD..."
+const apiKey = "AIzaSyAnhsoPahwOMcqTxqCxPXu10Awa0RuANX4" 
+// ------------------------------------------------------------------
+
 const hataMesaji = ref('')
 
 // Tarif State
@@ -121,16 +126,25 @@ const chatGecmisi = ref([
 ])
 
 async function callGemini(prompt) {
-  if(!apiKey) return "API Anahtarı eksik!";
+  if(!apiKey) {
+    return "⚠️ Hata: API Anahtarı eksik! Lütfen aistudio.google.com adresinden aldığın anahtarı koda ekle.";
+  }
+
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     })
+    
+    if (!res.ok) throw new Error('API Hatası: Anahtar geçersiz veya eksik.')
+    
     const data = await res.json()
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Hata oluştu."
-  } catch(e) { return "Bağlantı hatası." }
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Cevap alınamadı."
+  } catch(e) { 
+    console.error(e);
+    return "⚠️ Bağlantı Hatası: Lütfen internetini ve API anahtarını kontrol et."; 
+  }
 }
 
 async function tarifUret() {
@@ -149,25 +163,19 @@ async function menuOluştur() {
   kaloriBilgisi.value = '';
   hataMesaji.value = '';
   
-  console.log("Kiler verisi çekiliyor...");
-
-  // DÜZELTME: Hata kontrolü ve miktar filtresi eklendi
   const { data: stoklar, error } = await supabase
     .from('kiler')
     .select('malzeme_adi, miktar')
-    .gt('miktar', 0); // Stoğu 0'dan büyük olanları getir
+    .gt('miktar', 0); 
   
   if (error) {
-    console.error("Supabase Hatası:", error);
     hataMesaji.value = "Veritabanı hatası: " + error.message;
     loading.value = false;
     return;
   }
   
-  console.log("Gelen Stoklar:", stoklar);
-
   if (!stoklar || stoklar.length === 0) {
-    hataMesaji.value = "Kilerinde stok görünmüyor (veya miktarı 0). Önce Kilerim sayfasına gidip ürün eklemelisin.";
+    hataMesaji.value = "Kilerinde stok görünmüyor. Önce ürün eklemelisin.";
     loading.value = false;
     return;
   }
@@ -176,10 +184,9 @@ async function menuOluştur() {
 
   const prompt = `
     Sen profesyonel bir ev aşçısısın. Evdeki stoklarım: [${stokListesi}].
-    Bu malzemeleri (ve temel baharat/yağ/salça gibi ürünleri) kullanarak bana uyumlu bir "Günün Menüsü" oluştur.
+    Bu malzemeleri kullanarak bana uyumlu bir "Günün Menüsü" oluştur.
     
-    Çıktı formatı kesinlikle şöyle olsun (Başka bir şey yazma):
-    
+    Çıktı formatı kesinlikle şöyle olsun:
     MENÜ_BASLANGIC
     🍲 Ana Yemek: [Yemek Adı]
     🍚 Yancı: [Yemek Adı]
@@ -197,6 +204,13 @@ async function menuOluştur() {
 
   const rawResult = await callGemini(prompt);
   
+  // Hata varsa direkt göster
+  if (rawResult.startsWith("⚠️")) {
+      menuSonuc.value = rawResult;
+      loading.value = false;
+      return;
+  }
+
   const menuMatch = rawResult.match(/MENÜ_BASLANGIC([\s\S]*?)MENÜ_BITIS/);
   const kaloriMatch = rawResult.match(/KALORI_BASLANGIC([\s\S]*?)KALORI_BITIS/);
   const promptMatch = rawResult.match(/INGILIZCE_OZET_BASLANGIC([\s\S]*?)INGILIZCE_OZET_BITIS/);
