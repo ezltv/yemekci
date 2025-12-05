@@ -48,7 +48,15 @@
             <option value="şişe">Şişe</option>
           </select>
           
-          <input v-model="yeniMalzeme.skt" type="date" class="sub-input date-input">
+          <!-- DÜZELTME: SKT Alanı Artık Placeholder Destekli -->
+          <input 
+            v-model="yeniMalzeme.skt" 
+            :type="sktInputType" 
+            class="sub-input date-input"
+            placeholder="📅 SKT Seç"
+            @focus="sktInputType = 'date'"
+            @blur="!yeniMalzeme.skt ? sktInputType = 'text' : null"
+          >
           
           <button @click="malzemeEkle" class="add-btn">
             Ekle ({{ toplamStokHesapla }})
@@ -171,6 +179,9 @@ const loading = ref(true)
 const aiLoading = ref(false)
 const seciliKonumFiltresi = ref("Hepsi")
 
+// SKT Input Tipi (Başlangıçta text görünür ki placeholder çıksın)
+const sktInputType = ref('text')
+
 // Modal State
 const isConsumeModalOpen = ref(false)
 const selectedItemToConsume = ref(null)
@@ -282,6 +293,7 @@ async function malzemeEkle() {
   if (!error) {
     const eskiKonum = yeniMalzeme.value.konum
     yeniMalzeme.value = { ad: '', paketSayisi: 1, paketAgirligi: 1, birim: 'adet', skt: '', resim: '', konum: eskiKonum }
+    sktInputType.value = 'text' // Reset placeholder
     getKiler()
   } else { alert("Hata: " + error.message) }
 }
@@ -350,7 +362,6 @@ function sktGectiMi(tarihStr) {
   return skt < bugun 
 }
 
-// YENİ: Tarih formatlama fonksiyonu
 function formatTarih(tarihStr) {
   if (!tarihStr) return ''
   const date = new Date(tarihStr)
@@ -415,7 +426,7 @@ onMounted(() => {
   padding: 12px; 
   border-radius: 16px;
   display: flex; 
-  flex-direction: column; /* DİKEY YERLEŞİM */
+  flex-direction: column; 
   border: 1px solid #f3f4f6; 
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
   transition: transform 0.1s;
@@ -445,7 +456,7 @@ onMounted(() => {
 
 .img-box { 
   position: relative; 
-  width: 110px; /* GÖRSEL BÜYÜTÜLDÜ */
+  width: 110px; 
   height: 110px; 
   border-radius: 12px; 
   overflow: hidden; 
@@ -462,7 +473,6 @@ onMounted(() => {
   gap: 4px;
   align-items: flex-start; 
 }
-/* YAZILAR BÜYÜTÜLDÜ VE KALINLAŞTIRILDI */
 .p-name { font-weight: 800; font-size: 18px; color: #111827; white-space: normal; line-height: 1.2; }
 .p-loc { font-size: 13px; color: #4b5563; font-weight: 600; }
 .p-qty { font-size: 15px; font-weight: 800; color: #374151; display: flex; align-items: center; gap: 4px; }
@@ -470,7 +480,6 @@ onMounted(() => {
 .alert-text { font-size: 11px; background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: 700;}
 .p-skt { font-size: 12px; color: #059669; font-weight: 700; margin-top: 2px; }
 
-/* AKSİYON BUTONLARI (ALT KISIM) */
 .card-actions { 
   display: flex; 
   gap: 10px; 
@@ -481,7 +490,7 @@ onMounted(() => {
 }
 
 .action-btn { 
-  height: 40px; /* Butonlar biraz daha yüksek */
+  height: 40px; 
   border-radius: 8px; 
   border: none; 
   display: flex; 
@@ -493,7 +502,7 @@ onMounted(() => {
 }
 
 .use-btn {
-  flex: 2; /* Geniş alan */
+  flex: 2; 
   background: #f1f5f9; 
   color: #0f172a; 
   border: 1px solid #cbd5e1; 
@@ -512,7 +521,7 @@ onMounted(() => {
 .red-arrow { color: #ef4444; font-size: 14px; }
 
 .del-btn { 
-  flex: 1; /* Daha dar alan */
+  flex: 1; 
   background: #fee2e2; 
   color: #ef4444; 
 }
