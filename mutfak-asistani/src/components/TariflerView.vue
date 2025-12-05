@@ -34,25 +34,41 @@
         </div>
       </div>
 
-      <!-- MOD: GÜNÜN MENÜSÜ (YENİ) -->
+      <!-- MOD: GÜNÜN MENÜSÜ (Hata Gösterimli) -->
       <div v-else-if="mod === 'menu'" class="menu-box">
         <div class="menu-intro" v-if="!menuSonuc">
           <div class="chef-icon">👨‍🍳</div>
           <h3>Bugün Ne Pişirsem?</h3>
-          <p>Kilerindeki tüm malzemeleri analiz edip sana özel <strong>tam bir menü</strong> (Ana yemek, yancı, salata vb.) hazırlayayım mı?</p>
+          <p>Kilerindeki stoklara göre <strong>fotoğraflı ve kalorisi hesaplanmış</strong> tam bir menü hazırlayayım mı?</p>
           <button @click="menuOluştur" class="menu-btn" :disabled="loading">
             {{ loading ? 'Menü Hazırlanıyor... 🍳' : 'Günün Menüsünü Oluştur 🍽️' }}
           </button>
+          <!-- Hata Mesajı Alanı -->
+          <p v-if="hataMesaji" class="error-msg">{{ hataMesaji }}</p>
         </div>
 
         <div v-else class="menu-result">
+          <!-- Menü Görseli -->
+          <div class="menu-image-container" v-if="menuGorseli">
+             <img :src="menuGorseli" class="generated-menu-img" alt="Günün Menüsü" />
+             <div class="img-overlay">✨ Yapay Zeka Tarafından Üretildi</div>
+          </div>
+          <div v-else-if="gorselYukleniyor" class="img-loading">
+             🎨 Menü fotoğrafı çiziliyor...
+          </div>
+
           <h3 class="menu-title">🎉 Günün Menüsü</h3>
+          
           <div class="menu-card">
             <div class="menu-content">{{ menuSonuc }}</div>
+            <div class="nutrition-badge" v-if="kaloriBilgisi">
+               🔥 {{ kaloriBilgisi }}
+            </div>
           </div>
+
           <div class="menu-actions">
             <button @click="menuOluştur" class="refresh-btn" :disabled="loading">
-              {{ loading ? '...' : '🔄 Değiştir / Yeni Öneri' }}
+              {{ loading ? '...' : '🔄 Başka Bir Menü Öner' }}
             </button>
           </div>
         </div>
@@ -66,11 +82,10 @@
         <div v-if="loading" class="chat-bubble model loading">...</div>
       </div>
 
-      <!-- Alt inputun altında kalmaması için boşluk -->
       <div class="bottom-spacer"></div>
     </div>
 
-    <!-- CHAT INPUT (Sadece Chat modunda en altta sabit) -->
+    <!-- CHAT INPUT -->
     <div v-if="mod === 'chat'" class="fixed-bottom-input">
       <input v-model="chatInput" @keyup.enter="mesajGonder" placeholder="Bir soru sor..." />
       <button @click="mesajGonder">➤</button>
@@ -81,11 +96,13 @@
 
 <script setup>
 import { ref } from 'vue'
-import { supabase } from '../supabase' // Supabase eklendi
+// DÜZELTME: Supabase import yolu kontrol edildi
+import { supabase } from '../supabase'
 
-const mod = ref('tarif') // tarif | menu | chat
+const mod = ref('tarif') 
 const loading = ref(false)
 const apiKey = "" // API KEY BURAYA
+const hataMesaji = ref('')
 
 // Tarif State
 const malzemeler = ref('')
@@ -93,6 +110,9 @@ const sonuc = ref(null)
 
 // Menü State
 const menuSonuc = ref(null)
+const menuGorseli = ref(null)
+const gorselYukleniyor = ref(false)
+const kaloriBilgisi = ref('')
 
 // Chat State
 const chatInput = ref('')
@@ -100,21 +120,17 @@ const chatGecmisi = ref([
   { role: 'model', text: 'Merhaba! Ben Şef Gemini. Mutfağına hoş geldim.' }
 ])
 
-// --- GEMINI API ÇAĞRISI ---
 async function callGemini(prompt) {
-  if(!apiKey) return "API Anahtarı eksik! Lütfen kodu güncelleyip API anahtarınızı girin.";
+  if(!apiKey) return "API Anahtarı eksik!";
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     })
-    
-    if (!res.ok) throw new Error('API Hatası')
-    
     const data = await res.json()
     return data.candidates?.[0]?.content?.parts?.[0]?.text || "Hata oluştu."
-  } catch(e) { return "Bağlantı hatası veya API limiti." }
+  } catch(e) { return "Bağlantı hatası." }
 }
 
 async function tarifUret() {
@@ -125,37 +141,82 @@ async function tarifUret() {
   loading.value = false;
 }
 
-// YENİ: GÜNÜN MENÜSÜ OLUŞTURMA
+// GÜNÜN MENÜSÜ
 async function menuOluştur() {
   loading.value = true;
+  menuSonuc.value = null;
+  menuGorseli.value = null;
+  kaloriBilgisi.value = '';
+  hataMesaji.value = '';
   
-  // 1. Kilerdeki malzemeleri çek
-  const { data: stoklar, error } = await supabase.from('kiler').select('malzeme_adi');
+  console.log("Kiler verisi çekiliyor...");
+
+  // DÜZELTME: Hata kontrolü ve miktar filtresi eklendi
+  const { data: stoklar, error } = await supabase
+    .from('kiler')
+    .select('malzeme_adi, miktar')
+    .gt('miktar', 0); // Stoğu 0'dan büyük olanları getir
   
-  if (error || !stoklar || stoklar.length === 0) {
-    menuSonuc.value = "Kilerinde hiç ürün yok gibi görünüyor. Önce stok eklemelisin! 📦";
+  if (error) {
+    console.error("Supabase Hatası:", error);
+    hataMesaji.value = "Veritabanı hatası: " + error.message;
+    loading.value = false;
+    return;
+  }
+  
+  console.log("Gelen Stoklar:", stoklar);
+
+  if (!stoklar || stoklar.length === 0) {
+    hataMesaji.value = "Kilerinde stok görünmüyor (veya miktarı 0). Önce Kilerim sayfasına gidip ürün eklemelisin.";
     loading.value = false;
     return;
   }
 
   const stokListesi = stoklar.map(i => i.malzeme_adi).join(', ');
 
-  // 2. Gemini'ye Menü Sor
   const prompt = `
-    Sen profesyonel bir ev aşçısısın. Evdeki stoklarım şunlar: [${stokListesi}].
-    Bu malzemeleri (ve evde bulunabilecek temel yağ, salça, baharat gibi şeyleri) kullanarak bana birbiriyle uyumlu, tek öğünlük harika bir "Günün Menüsü" oluştur.
-    Menüde Ana Yemek, Yardımcı Yemek (Pilav/Makarna vb.) ve Salata/İçecek olsun.
+    Sen profesyonel bir ev aşçısısın. Evdeki stoklarım: [${stokListesi}].
+    Bu malzemeleri (ve temel baharat/yağ/salça gibi ürünleri) kullanarak bana uyumlu bir "Günün Menüsü" oluştur.
     
-    Sadece menüdeki yemeklerin isimlerini alt alta şık bir liste olarak yaz. Tarif verme, sadece menüyü listele.
-    Örnek Çıktı Formatı:
+    Çıktı formatı kesinlikle şöyle olsun (Başka bir şey yazma):
+    
+    MENÜ_BASLANGIC
     🍲 Ana Yemek: [Yemek Adı]
     🍚 Yancı: [Yemek Adı]
-    🥗 Ortaya: [Salata/Meze Adı]
+    🥗 Ortaya: [Salata/Meze/İçecek Adı]
+    MENÜ_BITIS
     
-    Not: Lütfen abartılı olmayan, bu malzemelerle yapılabilecek gerçekçi Türk mutfağı menüsü olsun.
+    KALORI_BASLANGIC
+    Toplam: ~[Kalori] kcal (Sağlıklı/Doyurucu/Hafif)
+    KALORI_BITIS
+    
+    INGILIZCE_OZET_BASLANGIC
+    [Ana Yemek İngilizce], [Yancı İngilizce], [Ortaya İngilizce], turkish cuisine, photorealistic, 4k, delicious
+    INGILIZCE_OZET_BITIS
   `;
 
-  menuSonuc.value = await callGemini(prompt);
+  const rawResult = await callGemini(prompt);
+  
+  const menuMatch = rawResult.match(/MENÜ_BASLANGIC([\s\S]*?)MENÜ_BITIS/);
+  const kaloriMatch = rawResult.match(/KALORI_BASLANGIC([\s\S]*?)KALORI_BITIS/);
+  const promptMatch = rawResult.match(/INGILIZCE_OZET_BASLANGIC([\s\S]*?)INGILIZCE_OZET_BITIS/);
+
+  if (menuMatch) menuSonuc.value = menuMatch[1].trim();
+  else menuSonuc.value = rawResult; 
+
+  if (kaloriMatch) kaloriBilgisi.value = kaloriMatch[1].trim();
+
+  if (promptMatch) {
+    gorselYukleniyor.value = true;
+    const imagePrompt = promptMatch[1].trim().replace(/\n/g, ' ');
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=600&height=400&nologo=true&seed=${Math.random()}`;
+    
+    setTimeout(() => {
+        menuGorseli.value = url;
+        gorselYukleniyor.value = false;
+    }, 1500);
+  }
+
   loading.value = false;
 }
 
@@ -206,7 +267,7 @@ async function mesajGonder() {
 .reset-btn { width: 100%; margin-top: 15px; padding: 10px; background: #f1f3f5; color: #444; border: none; border-radius: 8px; font-weight: 600; }
 .markdown-body { white-space: pre-wrap; color: #333; line-height: 1.6; }
 
-/* YENİ: MENÜ ALANI */
+/* MENÜ ALANI */
 .menu-box { text-align: center; padding: 10px; }
 .menu-intro { display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 20px; }
 .chef-icon { font-size: 64px; margin-bottom: 10px; }
@@ -219,6 +280,13 @@ async function mesajGonder() {
   box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3); transition: transform 0.2s;
 }
 .menu-btn:active { transform: scale(0.95); }
+.error-msg { color: #ef4444; font-weight: bold; background: #fee2e2; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 13px; }
+
+/* MENÜ GÖRSELİ */
+.menu-image-container { position: relative; margin-bottom: 20px; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+.generated-menu-img { width: 100%; height: 200px; object-fit: cover; display: block; }
+.img-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 5px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+.img-loading { height: 200px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; color: #666; border-radius: 16px; margin-bottom: 20px; border: 2px dashed #ddd; }
 
 .menu-result { animation: slideUp 0.3s ease-out; }
 .menu-title { color: #ea580c; margin-bottom: 15px; font-size: 22px; }
@@ -227,10 +295,11 @@ async function mesajGonder() {
   padding: 25px; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
   margin-bottom: 20px; position: relative; overflow: hidden;
 }
-/* Arka plana şık bir desen */
-.menu-card::after {
-  content: "🍽️"; position: absolute; right: -10px; bottom: -10px; font-size: 100px; opacity: 0.05; pointer-events: none;
+.nutrition-badge {
+  margin-top: 15px; background: #fff7ed; color: #c2410c; 
+  padding: 10px; border-radius: 10px; font-size: 13px; font-weight: bold; border: 1px solid #ffedd5;
 }
+
 .menu-content { font-size: 16px; line-height: 1.8; color: #333; white-space: pre-wrap; font-weight: 500; }
 .refresh-btn { 
   background: white; border: 2px solid #f97316; color: #f97316; 
