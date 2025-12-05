@@ -11,18 +11,26 @@
       
       <!-- ÜST BAR: Sol: Liste, Sağ: Çıkış -->
       <header class="top-bar">
-        <!-- SOL: Liste Butonu -->
-        <button 
-          @click="currentView = 'alisveris'" 
-          class="header-btn magic-btn"
-          :class="{ active: currentView === 'alisveris' }"
-        >
-          📝 Alışveriş Listesi
-        </button>
+        <!-- SOL GRUP -->
+        <div class="left-group">
+          <!-- Alışveriş Listesi -->
+          <button 
+            @click="currentView = 'alisveris'" 
+            class="header-btn magic-btn"
+            :class="{ active: currentView === 'alisveris' }"
+          >
+            📝 Liste
+          </button>
+          
+          <!-- TEST BUTONU (BİLDİRİM İÇİN) -->
+          <button @click="testBildirim" class="header-btn test-btn" title="Bildirim Testi">
+            🔔
+          </button>
+        </div>
 
         <!-- SAĞ: Çıkış Butonu -->
         <button @click="cikisYap" class="header-btn logout-btn">
-          Çıkış Yap 🚪
+          Çıkış 🚪
         </button>
       </header>
 
@@ -81,28 +89,19 @@ const activeComponent = computed(() => {
   return KilerView
 })
 
-// --- BİLDİRİM SİSTEMİ (NATIVE WEB NOTIFICATION) ---
-// OneSignal olmadan, tarayıcının kendi özelliğiyle çalışır.
+// --- BİLDİRİM SİSTEMİ (GERÇEK KONTROL) ---
 const checkExpirationAndNotify = async () => {
-  // Tarayıcı desteği yoksa çık
   if (!("Notification" in window)) return;
-
-  // İzin yoksa iste
   if (Notification.permission === "default") {
     await Notification.requestPermission();
   }
-
-  // İzin verilmediyse zorlama
   if (Notification.permission !== "granted") return;
 
-  // Günde 1 kez kontrol etme mantığı
   const lastCheckDate = localStorage.getItem('last_skt_notify_date');
   const todayStr = new Date().toDateString();
 
-  // Eğer bugün zaten bildirim attıysak tekrar rahatsız etme
   if (lastCheckDate === todayStr) return; 
 
-  // Veritabanından SKT'leri çek
   const { data: urunler } = await supabase
     .from('kiler')
     .select('malzeme_adi, son_kullanma_tarihi');
@@ -110,49 +109,61 @@ const checkExpirationAndNotify = async () => {
   if (!urunler) return;
 
   let kritikUrunSayisi = 0;
-
   urunler.forEach(item => {
     if (!item.son_kullanma_tarihi) return;
-    
     const skt = new Date(item.son_kullanma_tarihi);
     const bugun = new Date();
-    // Farkı gün cinsinden hesapla (milisaniye -> gün)
     const fark = Math.ceil((skt - bugun) / (1000 * 60 * 60 * 24));
-
-    // 3 gün ve daha az kalanlar (veya tarihi geçmiş olanlar)
-    if (fark <= 3) {
-      kritikUrunSayisi++;
-    }
+    if (fark <= 3) kritikUrunSayisi++;
   });
 
-  // Eğer kritik ürün varsa BİLDİRİM GÖNDER
   if (kritikUrunSayisi > 0) {
     try {
-      // Tarayıcı/Telefon bildirimi oluştur
-      new Notification("⚠️ Mutfak Asistanı Uyarısı", {
-        body: `Dikkat! ${kritikUrunSayisi} ürünün tarihi geçmek üzere veya geçti. Hemen kontrol et! 🧐`,
-        icon: '/pwa-192x192.png', // Uygulama ikonu
-        vibrate: [200, 100, 200] // Titreşim (Android için)
+      new Notification("⚠️ Mutfak Asistanı", {
+        body: `Dikkat! ${kritikUrunSayisi} ürünün tarihi geçmek üzere.`,
+        icon: '/pwa-192x192.png',
+        vibrate: [200, 100, 200]
       });
-      
-      // Bugün bildirim gönderildiğini kaydet
       localStorage.setItem('last_skt_notify_date', todayStr);
     } catch (e) {
-      console.error("Bildirim gönderilemedi:", e);
+      console.error("Bildirim hatası:", e);
     }
+  }
+}
+
+// --- TEST BUTONU FONKSİYONU ---
+const testBildirim = async () => {
+  if (!("Notification" in window)) {
+    alert("Cihazın bu özelliği desteklemiyor.");
+    return;
+  }
+
+  // İzin iste
+  let permission = Notification.permission;
+  if (permission === "default") {
+    permission = await Notification.requestPermission();
+  }
+
+  if (permission === "granted") {
+    // Hemen bildirim gönder
+    new Notification("🔔 Test Başarılı!", {
+      body: "Bildirim sistemin harika çalışıyor şefim! 👨‍🍳",
+      icon: '/pwa-192x192.png',
+      vibrate: [200, 100, 200]
+    });
+  } else {
+    alert("Bildirim izni reddedildi. Ayarlardan açmalısın.");
   }
 }
 
 onMounted(() => {
   supabase.auth.getSession().then(({ data }) => {
     session.value = data.session
-    // Oturum açılınca bildirimleri kontrol et
     if (data.session) checkExpirationAndNotify();
   })
 
   supabase.auth.onAuthStateChange((_, _session) => {
     session.value = _session
-    // Giriş yapıldığında da kontrol et
     if (_session) checkExpirationAndNotify();
   })
 })
@@ -164,69 +175,65 @@ const cikisYap = async () => {
 </script>
 
 <style>
-/* EVRENSEL SIFIRLAMA (Kaymaları Önler) */
-* {
-  box-sizing: border-box; 
-  margin: 0;
-  padding: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-
+/* GENEL AYARLAR */
 body { 
   font-family: 'Segoe UI', sans-serif; 
   background: #f8f9fa; 
-  overflow: hidden; /* Sayfa kaymasını engelle */
-  width: 100%;
-  height: 100%;
+  margin: 0; 
+  padding: 0; 
+  color: #222; 
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* MOBİL KONTEYNER */
 .mobile-container { 
-  position: absolute; 
-  top: 0; left: 0; right: 0; bottom: 0;
+  max-width: 100%; 
+  min-height: 100vh; 
   background: white; 
-  overflow: hidden;
+  position: relative;
 }
 
-.app-layout {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
+.app-wrapper {
+  padding-bottom: 80px; 
 }
 
-/* ÜST BAR (SABİT) */
+/* ÜST BİLGİ ÇUBUĞU */
 .top-bar {
-  flex-shrink: 0;
-  height: 54px;
-  display: flex; 
+  display: flex;
   justify-content: space-between; 
-  align-items: center; 
-  padding: 0 15px; 
-  background: #fff; 
-  border-bottom: 1px solid #eee; 
+  align-items: center;
+  padding: 10px 15px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  position: sticky; 
+  top: 0;
   z-index: 50;
-  width: 100%;
+  height: 60px;
+}
+
+.left-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 /* HEADER BUTONLARI */
 .header-btn {
-  border: none; 
-  border-radius: 8px; 
-  padding: 0 12px; 
-  font-size: 12px; 
-  font-weight: 700; 
-  cursor: pointer; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
   gap: 5px;
   height: 36px;
   transition: transform 0.1s;
 }
 .header-btn:active { transform: scale(0.95); }
 
-/* Renkli Liste Butonu */
+/* SİHİRLİ LİSTE BUTONU */
 .magic-btn {
   color: white;
   background: linear-gradient(270deg, #f59e0b, #ec4899, #8b5cf6, #f59e0b);
@@ -235,58 +242,65 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
+/* TEST BUTONU STİLİ */
+.test-btn {
+  background: #f3f4f6;
+  color: #4b5563;
+  padding: 0;
+  width: 36px; /* Kare buton */
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+}
+
 @keyframes colorWave {
   0% { background-position: 0% 50% }
   50% { background-position: 100% 50% }
   100% { background-position: 0% 50% }
 }
 
-.logout-btn { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; }
-
-/* İÇERİK ALANI */
-.content-area {
-  flex: 1; 
-  position: relative;
-  overflow: hidden; 
-  background: #f8f9fa;
-  width: 100%;
+.logout-btn {
+  background: #fff0f0;
+  border: 1px solid #ffcdd2;
+  color: #c62828;
+  border-radius: 6px; 
 }
 
 /* ALT MENÜ TASARIMI */
 .bottom-nav {
-  flex-shrink: 0;
-  height: 70px; 
-  background: white; 
-  display: flex; 
-  justify-content: space-around; 
-  align-items: center; 
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.05); 
-  border-top: 1px solid #eee; 
-  z-index: 1000; 
-  padding-bottom: env(safe-area-inset-bottom);
-  position: relative; 
+  position: fixed;
+  bottom: 0;
+  left: 0;
   width: 100%;
+  height: 70px;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  border-top: 1px solid #eee;
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
-.nav-item { 
-  flex: 1; 
-  border: none; 
-  background: none; 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  justify-content: center; 
-  gap: 4px; 
-  cursor: pointer; 
-  color: #999; 
-  transition: all 0.3s ease; 
+.nav-item {
+  flex: 1;
+  border: none;
+  background: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  color: #999;
+  transition: all 0.3s ease;
 }
 
 .nav-item .icon { font-size: 24px; filter: grayscale(100%); transition: 0.3s; }
 .nav-item .label { font-size: 11px; font-weight: 600; }
 
 .nav-item.active { color: #000; }
-.nav-item.active .icon { filter: grayscale(0%); transform: scale(1.1); }
+.nav-item.active .icon { filter: grayscale(0%); transform: scale(1.2); }
 
 .divider { width: 1px; height: 30px; background: #eee; }
 
