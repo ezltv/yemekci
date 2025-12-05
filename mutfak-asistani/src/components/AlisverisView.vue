@@ -1,225 +1,233 @@
 <template>
-  <div class="mobile-container">
-
-    <!-- 1. DURUM: GİRİŞ YAPILMAMIŞSA -->
-    <div v-if="!session" class="login-wrapper">
-      <LoginView />
+  <div class="view-container">
+    
+    <!-- 1. SABİT ÜST KISIM -->
+    <div class="fixed-header">
+      <h2 class="title">📝 Alışveriş Listesi</h2>
+      
+      <div class="input-row">
+        <input 
+          v-model="yeniUrun" 
+          placeholder="Eksik ne var? (Örn: Süt)" 
+          class="main-input"
+          @keyup.enter="ekle"
+          ref="inputRef"
+        />
+        <button @click="ekle" class="add-btn" :disabled="yukleniyor">
+          {{ yukleniyor ? '...' : '➕' }}
+        </button>
+      </div>
     </div>
 
-    <!-- 2. DURUM: GİRİŞ YAPILMIŞSA -->
-    <div v-else class="app-layout">
+    <!-- 2. LİSTE ALANI -->
+    <div class="scroll-content">
       
-      <!-- ÜST BAR: Sol: Liste, Sağ: Çıkış -->
-      <header class="top-bar">
-        <!-- SOL: Liste Butonu -->
-        <button 
-          @click="currentView = 'alisveris'" 
-          class="header-btn list-btn"
-          :class="{ active: currentView === 'alisveris' }"
+      <!-- Yükleniyor Durumu -->
+      <div v-if="yukleniyor && liste.length === 0" class="loading-text">Liste yükleniyor...</div>
+
+      <!-- Boş Liste Durumu -->
+      <div v-else-if="liste.length === 0" class="empty-state">
+        <div class="empty-icon">🛒</div>
+        <p>Listeniz bomboş! Her şey tamam mı?</p>
+      </div>
+
+      <!-- Dolu Liste -->
+      <div v-else class="shopping-list">
+        <div 
+          v-for="item in liste" 
+          :key="item.id" 
+          class="list-item"
+          :class="{ completed: item.alindi }"
         >
-          📝 Liste
+          <!-- Checkbox ve İsim -->
+          <div class="item-left" @click="toggleDurum(item)">
+            <div class="checkbox">
+              <span v-if="item.alindi">✔</span>
+            </div>
+            <span class="item-text">{{ item.malzeme_adi }}</span>
+          </div>
+
+          <!-- Sil Butonu -->
+          <button @click="sil(item.id)" class="del-btn">🗑️</button>
+        </div>
+      </div>
+
+      <!-- Alınanları Temizle Butonu -->
+      <div v-if="tamamlananVarMi" class="clear-container">
+        <button @click="tamamlananlariSil" class="clear-btn">
+          🧹 Alınanları Temizle
         </button>
+      </div>
 
-        <!-- SAĞ: Çıkış Butonu -->
-        <button @click="cikisYap" class="header-btn logout-btn">
-          Çıkış 🚪
-        </button>
-      </header>
-
-      <!-- İÇERİK ALANI -->
-      <main class="content-area">
-        <Transition name="fade" mode="out-in">
-          <KeepAlive>
-            <component :is="activeComponent" />
-          </KeepAlive>
-        </Transition>
-      </main>
-
-      <!-- ALT MENÜ (Sadece 2 Buton) -->
-      <nav class="bottom-nav">
-        <button 
-          @click="currentView = 'kiler'" 
-          class="nav-item" 
-          :class="{ active: currentView === 'kiler' }"
-        >
-          <span class="icon">📦</span>
-          <span class="label">Kilerim</span>
-        </button>
-
-        <div class="divider"></div>
-
-        <button 
-          @click="currentView = 'tarifler'" 
-          class="nav-item" 
-          :class="{ active: currentView === 'tarifler' }"
-        >
-          <span class="icon">👨‍🍳</span>
-          <span class="label">Şefin Menüsü</span>
-        </button>
-      </nav>
-
+      <div class="bottom-spacer"></div>
     </div>
 
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { supabase } from './supabase'
-import KilerView from './components/KilerView.vue'
-import TariflerView from './components/TariflerView.vue'
-import AlisverisView from './components/AlisverisView.vue'
-import LoginView from './components/LoginView.vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
+// DÜZELTME: components klasöründen bir üst dizine (src) çıkmak için "../" kullanıyoruz.
+import { supabase } from '../supabase'
 
-const currentView = ref('kiler')
-const session = ref(null)
+const liste = ref([])
+const yeniUrun = ref('')
+const yukleniyor = ref(false)
+const inputRef = ref(null)
 
-const activeComponent = computed(() => {
-  if (currentView.value === 'kiler') return KilerView
-  if (currentView.value === 'tarifler') return TariflerView
-  if (currentView.value === 'alisveris') return AlisverisView
-  return KilerView
-})
+const tamamlananVarMi = computed(() => liste.value.some(i => i.alindi))
+
+// Listeyi Çek
+async function listeyiGetir() {
+  yukleniyor.value = true
+  const { data } = await supabase
+    .from('alisveris_listesi')
+    .select('*')
+    .order('alindi', { ascending: true }) // Alınmayanlar üstte kalsın
+    .order('created_at', { ascending: false })
+  
+  if (data) liste.value = data
+  yukleniyor.value = false
+}
+
+// Ekle
+async function ekle() {
+  if (!yeniUrun.value.trim()) return
+  const text = yeniUrun.value.trim()
+  
+  // Optimistik güncelleme (Hemen ekranda göster)
+  const tempId = Date.now()
+  liste.value.unshift({ id: tempId, malzeme_adi: text, alindi: false })
+  yeniUrun.value = ''
+  
+  const { error } = await supabase.from('alisveris_listesi').insert({ malzeme_adi: text })
+  
+  if (error) {
+    alert("Hata!")
+    listeyiGetir() // Hata varsa geri al
+  } else {
+    // ID güncellemek için arka planda yenile
+    listeyiGetir()
+  }
+  
+  nextTick(() => inputRef.value?.focus())
+}
+
+// Durum Değiştir (Tik At)
+async function toggleDurum(item) {
+  // Anlık değişim
+  item.alindi = !item.alindi
+  
+  // Listeyi yeniden sırala (alınanlar alta gitsin diye)
+  liste.value.sort((a, b) => a.alindi === b.alindi ? 0 : a.alindi ? 1 : -1)
+
+  await supabase
+    .from('alisveris_listesi')
+    .update({ alindi: item.alindi })
+    .eq('id', item.id)
+}
+
+// Tek Sil
+async function sil(id) {
+  if(!confirm("Silinsin mi?")) return
+  liste.value = liste.value.filter(i => i.id !== id)
+  await supabase.from('alisveris_listesi').delete().eq('id', id)
+}
+
+// Toplu Sil (Sadece alınanları)
+async function tamamlananlariSil() {
+  if(!confirm("İşaretli olanların hepsi silinsin mi?")) return
+  
+  // Sadece işaretlilerin ID'lerini al
+  const silinecekler = liste.value.filter(i => i.alindi).map(i => i.id)
+  
+  // UI Temizle
+  liste.value = liste.value.filter(i => !i.alindi)
+  
+  // DB Temizle
+  await supabase.from('alisveris_listesi').delete().in('id', silinecekler)
+}
 
 onMounted(() => {
-  supabase.auth.getSession().then(({ data }) => {
-    session.value = data.session
-  })
-
-  supabase.auth.onAuthStateChange((_, _session) => {
-    session.value = _session
-  })
+  listeyiGetir()
 })
-
-const cikisYap = async () => {
-  const { error } = await supabase.auth.signOut()
-  if (error) alert("Çıkış hatası: " + error.message)
-}
 </script>
 
-<style>
-/* EVRENSEL SIFIRLAMA (Sorunu çözen kısım) */
-* {
-  box-sizing: border-box; /* Padding ekleyince genişlik artmasın */
-  margin: 0;
-  padding: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-
-body { 
-  font-family: 'Segoe UI', sans-serif; 
-  background: #f8f9fa; 
-  overflow: hidden; /* Sayfa kaymasını engelle */
-  width: 100%;
-  height: 100%;
-}
-
-/* MOBİL KONTEYNER */
-.mobile-container { 
-  position: absolute; /* Kesin konumlandırma */
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: white; 
-  overflow: hidden;
-}
-
-.app-layout {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-}
-
-/* ÜST BAR */
-.top-bar {
-  flex-shrink: 0;
-  height: 54px;
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  padding: 0 15px; /* İç boşluk */
-  background: #fff; 
-  border-bottom: 1px solid #eee; 
-  z-index: 50;
-  
-  /* Sağa sola taşmayı engellemek için */
-  width: 100%;
-}
-
-/* HEADER BUTONLARI */
-.header-btn {
-  border: none; 
-  border-radius: 8px; 
-  padding: 0 12px; /* Sadece yanlardan boşluk */
-  font-size: 12px; 
-  font-weight: 700; 
-  cursor: pointer; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center;
-  gap: 5px;
-  height: 36px; /* Buton yüksekliği sabit */
-  transition: transform 0.1s;
-}
-.header-btn:active { transform: scale(0.95); }
-
-.list-btn { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
-.list-btn.active { background: #fbbf24; color: #78350f; border-color: #f59e0b; }
-
-.logout-btn { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; }
-
-/* İÇERİK ALANI */
-.content-area {
-  flex: 1; /* Kalan boşluğu doldur */
+<style scoped>
+.view-container { 
+  display: flex; flex-direction: column; height: 100%; 
+  background: #fffbeb; /* Hafif sarımsı not defteri rengi */
   position: relative;
-  overflow: hidden; 
-  background: #f8f9fa;
-  width: 100%;
 }
 
-/* ALT MENÜ TASARIMI */
-.bottom-nav {
-  flex-shrink: 0;
-  height: 70px; 
-  background: white; 
-  display: flex; 
-  justify-content: space-around; 
-  align-items: center; 
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.05); 
-  border-top: 1px solid #eee; 
-  z-index: 1000; 
-  
-  /* Güvenli Alan ve Konumlandırma */
-  padding-bottom: env(safe-area-inset-bottom);
-  position: relative; /* Fixed yerine relative çünkü flex yapıda en altta */
-  width: 100%;
+.fixed-header { 
+  flex-shrink: 0; background: #fffbeb; padding: 15px; 
+  border-bottom: 2px dashed #e5e7eb; text-align: center; 
 }
+.title { margin: 0 0 15px 0; font-size: 20px; color: #78350f; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 
-.nav-item { 
+.input-row { display: flex; gap: 10px; }
+.main-input { 
   flex: 1; 
-  border: none; 
-  background: none; 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  justify-content: center; 
-  gap: 4px; 
-  cursor: pointer; 
-  color: #999; 
-  transition: all 0.3s ease; 
+  padding: 12px; 
+  border: 2px solid #fcd34d; 
+  background: white;
+  border-radius: 12px; 
+  font-size: 16px; 
+  outline: none; 
+  font-weight: 500;
+  color: #1f2937; /* YAZI RENGİ KOYU */
+}
+.main-input:focus { border-color: #f59e0b; }
+.main-input::placeholder { color: #9ca3af; }
+
+.add-btn { 
+  width: 50px; background: #f59e0b; color: white; border: none; 
+  border-radius: 12px; font-size: 24px; cursor: pointer; 
 }
 
-.nav-item .icon { font-size: 24px; filter: grayscale(100%); transition: 0.3s; }
-.nav-item .label { font-size: 11px; font-weight: 600; }
+.scroll-content { 
+  flex: 1; overflow-y: auto; padding: 20px; 
+  -webkit-overflow-scrolling: touch;
+}
 
-.nav-item.active { color: #000; }
-.nav-item.active .icon { filter: grayscale(0%); transform: scale(1.1); }
+/* LİSTE STİLLERİ */
+.shopping-list { display: flex; flex-direction: column; gap: 8px; }
 
-.divider { width: 1px; height: 30px; background: #eee; }
+.list-item { 
+  display: flex; align-items: center; justify-content: space-between;
+  background: white; padding: 12px; border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.2s;
+  border-left: 4px solid #fbbf24;
+}
 
-/* GEÇİŞ ANİMASYONU */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.list-item.completed { 
+  background: #f3f4f6; opacity: 0.6; border-left-color: #d1d5db; 
+}
+
+.item-left { display: flex; align-items: center; gap: 12px; flex: 1; cursor: pointer; }
+
+.checkbox { 
+  width: 24px; height: 24px; border: 2px solid #d1d5db; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; color: #10b981; font-weight: bold; font-size: 16px;
+}
+.completed .checkbox { border-color: #10b981; background: #d1fae5; }
+
+.item-text { font-size: 16px; color: #374151; font-weight: 500; }
+.completed .item-text { text-decoration: line-through; color: #9ca3af; }
+
+.del-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 5px; opacity: 0.5; }
+.list-item:not(.completed) .del-btn { display: none; } 
+.list-item .del-btn { display: block; opacity: 1; } 
+
+/* CLEAN BUTTON */
+.clear-container { margin-top: 20px; text-align: center; }
+.clear-btn { 
+  background: #fee2e2; color: #ef4444; border: none; 
+  padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 13px; cursor: pointer;
+}
+
+.empty-state { text-align: center; margin-top: 60px; color: #b45309; opacity: 0.6; }
+.empty-icon { font-size: 50px; margin-bottom: 10px; }
+.bottom-spacer { height: 80px; }
 </style>
