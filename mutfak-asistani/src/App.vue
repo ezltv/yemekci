@@ -9,9 +9,9 @@
     <!-- 2. DURUM: GİRİŞ YAPILMIŞSA -->
     <div v-else class="app-layout">
       
-      <!-- ÜST BAR -->
+      <!-- ÜST BAR: Sol: Liste, Sağ: Çıkış -->
       <header class="top-bar">
-        <!-- SOL: Liste Butonu (Yeni) -->
+        <!-- SOL: Liste Butonu -->
         <button 
           @click="currentView = 'alisveris'" 
           class="header-btn list-btn"
@@ -20,20 +20,20 @@
           📝 Liste
         </button>
 
-        <!-- SAĞ: Çıkış Butonu (Sabit) -->
+        <!-- SAĞ: Çıkış Butonu -->
         <button @click="cikisYap" class="header-btn logout-btn">
-          Çıkış Yap 🚪
+          Çıkış 🚪
         </button>
       </header>
 
       <!-- İÇERİK ALANI -->
-      <div class="content-area">
+      <main class="content-area">
         <Transition name="fade" mode="out-in">
           <KeepAlive>
             <component :is="activeComponent" />
           </KeepAlive>
         </Transition>
-      </div>
+      </main>
 
       <!-- ALT MENÜ (Sadece 2 Buton) -->
       <nav class="bottom-nav">
@@ -46,7 +46,6 @@
           <span class="label">Kilerim</span>
         </button>
 
-        <!-- Tek Ayırıcı Çizgi -->
         <div class="divider"></div>
 
         <button 
@@ -94,65 +93,74 @@ onMounted(() => {
 
 const cikisYap = async () => {
   const { error } = await supabase.auth.signOut()
-  if (error) alert("Çıkış yapılırken hata oldu: " + error.message)
+  if (error) alert("Çıkış hatası: " + error.message)
 }
 </script>
 
 <style>
-/* GENEL AYARLAR */
+/* EVRENSEL SIFIRLAMA (Sorunu çözen kısım) */
+* {
+  box-sizing: border-box; /* Padding ekleyince genişlik artmasın */
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body { 
   font-family: 'Segoe UI', sans-serif; 
   background: #f8f9fa; 
-  margin: 0; 
-  padding: 0; 
-  color: #222; 
-  -webkit-tap-highlight-color: transparent;
-  overflow: hidden; /* Dış kaydırmayı engelle */
+  overflow: hidden; /* Sayfa kaymasını engelle */
+  width: 100%;
+  height: 100%;
 }
 
 /* MOBİL KONTEYNER */
 .mobile-container { 
-  max-width: 100%; 
-  min-height: 100vh; 
+  position: absolute; /* Kesin konumlandırma */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: white; 
-  position: relative;
   overflow: hidden;
 }
 
-/* APP DÜZENİ */
 .app-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* Ekran boyuna sabitle */
-  width: 100vw;
+  height: 100%;
+  width: 100%;
 }
 
-/* ÜST BİLGİ ÇUBUĞU - ZIMBA GİBİ SABİT */
+/* ÜST BAR */
 .top-bar {
-  flex-shrink: 0; /* Asla büzüşme */
-  height: 54px;   /* Sabit yükseklik */
+  flex-shrink: 0;
+  height: 54px;
   display: flex; 
   justify-content: space-between; 
   align-items: center; 
-  padding: 0 15px; 
+  padding: 0 15px; /* İç boşluk */
   background: #fff; 
   border-bottom: 1px solid #eee; 
   z-index: 50;
-  box-sizing: border-box;
+  
+  /* Sağa sola taşmayı engellemek için */
+  width: 100%;
 }
 
 /* HEADER BUTONLARI */
 .header-btn {
   border: none; 
   border-radius: 8px; 
-  padding: 6px 12px; 
+  padding: 0 12px; /* Sadece yanlardan boşluk */
   font-size: 12px; 
   font-weight: 700; 
   cursor: pointer; 
   display: flex; 
   align-items: center; 
+  justify-content: center;
   gap: 5px;
-  height: 32px; /* Buton yüksekliğini sabitledim, headerı şişirmez */
+  height: 36px; /* Buton yüksekliği sabit */
   transition: transform 0.1s;
 }
 .header-btn:active { transform: scale(0.95); }
@@ -160,7 +168,7 @@ body {
 .list-btn { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
 .list-btn.active { background: #fbbf24; color: #78350f; border-color: #f59e0b; }
 
-.logout-btn { background: #fff0f0; border: 1px solid #ffcdd2; color: #c62828; }
+.logout-btn { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; }
 
 /* İÇERİK ALANI */
 .content-area {
@@ -168,11 +176,12 @@ body {
   position: relative;
   overflow: hidden; 
   background: #f8f9fa;
+  width: 100%;
 }
 
 /* ALT MENÜ TASARIMI */
 .bottom-nav {
-  flex-shrink: 0; /* Asla büzüşme */
+  flex-shrink: 0;
   height: 70px; 
   background: white; 
   display: flex; 
@@ -181,7 +190,11 @@ body {
   box-shadow: 0 -2px 10px rgba(0,0,0,0.05); 
   border-top: 1px solid #eee; 
   z-index: 1000; 
+  
+  /* Güvenli Alan ve Konumlandırma */
   padding-bottom: env(safe-area-inset-bottom);
+  position: relative; /* Fixed yerine relative çünkü flex yapıda en altta */
+  width: 100%;
 }
 
 .nav-item { 
@@ -201,9 +214,8 @@ body {
 .nav-item .icon { font-size: 24px; filter: grayscale(100%); transition: 0.3s; }
 .nav-item .label { font-size: 11px; font-weight: 600; }
 
-/* Aktif Sekme */
 .nav-item.active { color: #000; }
-.nav-item.active .icon { filter: grayscale(0%); transform: scale(1.2); }
+.nav-item.active .icon { filter: grayscale(0%); transform: scale(1.1); }
 
 .divider { width: 1px; height: 30px; background: #eee; }
 
