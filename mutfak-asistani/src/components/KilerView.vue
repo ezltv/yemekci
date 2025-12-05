@@ -44,6 +44,8 @@
             <option value="litre">Lt</option>
             <option value="paket">Paket</option>
             <option value="kavanoz">Kavanoz</option>
+            <option value="rulo">Rulo</option>
+            <option value="şişe">Şişe</option>
           </select>
           
           <input v-model="yeniMalzeme.skt" type="date" class="sub-input date-input">
@@ -53,9 +55,9 @@
           </button>
         </div>
 
-        <!-- FİLTRE -->
+        <!-- FİLTRE (DROPDOWN) - Ekran taşmasını önlemek için select yaptık -->
         <div class="filter-row">
-          <label class="filter-label">🔍 Konum:</label>
+          <label class="filter-label">🔍 Filtrele:</label>
           <select v-model="seciliKonumFiltresi" class="filter-select">
             <option value="Hepsi">🏠 Tümü</option>
             <option v-for="yer in filtreSecenekleri" :key="yer" :value="yer">{{ yer }}</option>
@@ -105,6 +107,7 @@
 
           <!-- Sağ: Aksiyon Butonları -->
           <div class="card-actions">
+            <!-- MANUEL DÜŞME TUŞU -->
             <button @click="openConsumeModal(item)" class="action-btn decrease-btn">➖</button>
             <button @click="malzemeSil(item.id)" class="action-btn del-btn">🗑️</button>
           </div>
@@ -114,8 +117,8 @@
       <div class="bottom-spacer"></div>
     </div>
 
-    <!-- 3. TÜKETİM PENCERESİ (MODAL) - ESKİSİ GİBİ -->
-    <div v-if="isConsumeModalOpen" class="modal-overlay">
+    <!-- 3. TÜKETİM PENCERESİ (MODAL) -->
+    <div v-if="isConsumeModalOpen" class="modal-overlay" @click.self="isConsumeModalOpen = false">
       <div class="modal-content">
         <div class="modal-header">
           <h3>Ne kadar kullandın?</h3>
@@ -129,8 +132,9 @@
               type="number" 
               v-model="consumeAmount" 
               class="modal-input" 
-              placeholder="Miktar gir" 
+              placeholder="0" 
               ref="consumeInput"
+              @keyup.enter="confirmConsume"
             >
             <span class="modal-unit">{{ selectedItemToConsume?.birim }}</span>
           </div>
@@ -138,7 +142,8 @@
         </div>
 
         <div class="modal-footer">
-          <button @click="confirmConsume" class="modal-confirm-btn">Stoktan Düş</button>
+          <button @click="isConsumeModalOpen = false" class="modal-btn cancel">İptal</button>
+          <button @click="confirmConsume" class="modal-btn confirm">Stoktan Düş</button>
         </div>
       </div>
     </div>
@@ -232,16 +237,34 @@ async function getKiler() {
   loading.value = false
 }
 
-// AI Resim
+// AI Resim (Gelişmiş Çeviri ile)
 async function aiResimUret() {
   if(!yeniMalzeme.value.ad) { alert("Önce ürün adını yazmalısın!"); return; }
   aiLoading.value = true
+  
   const arananKelime = yeniMalzeme.value.ad.toLowerCase().trim()
-  const trToEn = { 'domates': 'tomato', 'biber': 'pepper', 'süt': 'milk', 'yumurta': 'egg', 'deterjan': 'detergent', 'salça': 'tomato paste', 'pirinç': 'rice', 'mercimek': 'lentils', 'makarna': 'pasta', 'ekmek': 'bread', 'yoğurt': 'yogurt', 'peynir': 'cheese', 'yağ': 'oil' } 
+  
+  // Gelişmiş Sözlük
+  const trToEn = { 
+    'domates': 'tomato', 'biber': 'pepper', 'süt': 'milk', 'yumurta': 'egg', 
+    'deterjan': 'detergent', 'salça': 'tomato paste', 'pirinç': 'rice', 
+    'mercimek': 'lentil', 'makarna': 'pasta', 'ekmek': 'bread', 'yoğurt': 'yogurt', 
+    'peynir': 'cheese', 'yağ': 'oil', 'tereyağı': 'butter', 'un': 'flour',
+    'şeker': 'sugar', 'tuz': 'salt', 'kahve': 'coffee', 'çay': 'tea', 
+    'patates': 'potato', 'soğan': 'onion', 'sarımsak': 'garlic', 'tavuk': 'chicken',
+    'et': 'meat', 'kıyma': 'minced meat', 'sucuk': 'turkish sausage', 'salam': 'salami',
+    'sosis': 'sausage', 'bal': 'honey', 'reçel': 'jam', 'zeytin': 'olive',
+    'tuvalet kağıdı': 'toilet paper', 'kağıt havlu': 'paper towel', 'şampuan': 'shampoo',
+    'sabun': 'soap', 'diş macunu': 'toothpaste'
+  } 
+  
   const ingilizceIsim = trToEn[arananKelime] || arananKelime
-  const prompt = `${ingilizceIsim} product photography, sharp focus, highly detailed, realistic white background, studio lighting, 8k`
+  
+  // Daha iyi prompt
+  const prompt = `${ingilizceIsim} product packaging, grocery item, isolated on white background, high quality, studio lighting, 4k`
   const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=300&height=300&nologo=true`
-  await new Promise(r => setTimeout(r, 800))
+  
+  await new Promise(r => setTimeout(r, 1000)) // Biraz bekle, yapay hissi ver
   yeniMalzeme.value.resim = aiUrl
   aiLoading.value = false
 }
@@ -269,9 +292,8 @@ async function malzemeEkle() {
 // MODAL AÇMA FONKSİYONU
 function openConsumeModal(item) {
   selectedItemToConsume.value = item
-  consumeAmount.value = '' // Boş başlat
+  consumeAmount.value = '' 
   isConsumeModalOpen.value = true
-  // Inputa odaklan
   nextTick(() => {
     if(consumeInput.value) consumeInput.value.focus()
   })
@@ -296,15 +318,11 @@ async function confirmConsume() {
       malzemeSil(currentItem.id)
     } else {
       await stokGuncelle(currentItem.id, 0)
-      // Listeyi yerel güncelle
-      const idx = kiler.value.findIndex(k => k.id === currentItem.id)
-      if(idx !== -1) kiler.value[idx].miktar = 0
+      updateLocalList(currentItem.id, 0)
     }
   } else {
     await stokGuncelle(currentItem.id, yeniMiktar)
-    // Listeyi yerel güncelle
-    const idx = kiler.value.findIndex(k => k.id === currentItem.id)
-    if(idx !== -1) kiler.value[idx].miktar = yeniMiktar
+    updateLocalList(currentItem.id, yeniMiktar)
   }
 
   isConsumeModalOpen.value = false
@@ -313,6 +331,11 @@ async function confirmConsume() {
 async function stokGuncelle(id, miktar) {
   const { error } = await supabase.from('kiler').update({ miktar: miktar }).eq('id', id)
   if(error) console.error("Stok güncelleme hatası", error)
+}
+
+function updateLocalList(id, miktar) {
+  const idx = kiler.value.findIndex(k => k.id === id)
+  if(idx !== -1) kiler.value[idx].miktar = miktar
 }
 
 async function malzemeSil(id) {
@@ -387,7 +410,7 @@ onMounted(() => {
 
 .add-btn { flex: 1; background: #111827; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; }
 
-/* FİLTRE */
+/* FİLTRE SATIRI (SELECT) */
 .filter-row { display: flex; align-items: center; gap: 8px; margin-top: 5px; background: #f3f4f6; padding: 8px; border-radius: 8px; }
 .filter-label { font-size: 12px; font-weight: 600; color: #666; }
 .filter-select { flex: 1; padding: 6px; border-radius: 6px; border: 1px solid #ddd; background: white; font-size: 13px; font-weight: 600; color: #333; }
@@ -461,8 +484,10 @@ onMounted(() => {
 .modal-unit { font-size: 16px; color: #6b7280; font-weight: 600; }
 .modal-hint { font-size: 12px; color: #9ca3af; margin: 0; }
 
-.modal-footer { display: flex; }
-.modal-confirm-btn { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 15px; cursor: pointer; }
+.modal-footer { display: flex; gap: 10px; }
+.modal-btn { flex: 1; padding: 12px; border-radius: 12px; font-weight: bold; font-size: 14px; cursor: pointer; border: none; }
+.modal-btn.cancel { background: #f3f4f6; color: #4b5563; }
+.modal-btn.confirm { background: #2563eb; color: white; }
 
 .empty-state, .loading-state { text-align: center; margin-top: 50px; color: #9ca3af; }
 .empty-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.5; filter: grayscale(1); }
