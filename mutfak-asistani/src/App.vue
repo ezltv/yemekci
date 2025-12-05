@@ -11,7 +11,7 @@
       
       <!-- ÜST BAR: Sol: Liste, Sağ: Çıkış -->
       <header class="top-bar">
-        <!-- SOL: Alışveriş Listesi Butonu -->
+        <!-- SOL: Liste Butonu -->
         <button 
           @click="currentView = 'alisveris'" 
           class="header-btn magic-btn"
@@ -35,7 +35,7 @@
         </Transition>
       </div>
 
-      <!-- ALT MENÜ (Sadece 2 Buton: Kiler ve Şef) -->
+      <!-- ALT MENÜ (Sadece 2 Buton) -->
       <nav class="bottom-nav">
         <button 
           @click="currentView = 'kiler'" 
@@ -81,81 +81,154 @@ const activeComponent = computed(() => {
   return KilerView
 })
 
+// --- BİLDİRİM SİSTEMİ (NATIVE WEB NOTIFICATION) ---
+// OneSignal olmadan, tarayıcının kendi özelliğiyle çalışır.
+const checkExpirationAndNotify = async () => {
+  // Tarayıcı desteği yoksa çık
+  if (!("Notification" in window)) return;
+
+  // İzin yoksa iste
+  if (Notification.permission === "default") {
+    await Notification.requestPermission();
+  }
+
+  // İzin verilmediyse zorlama
+  if (Notification.permission !== "granted") return;
+
+  // Günde 1 kez kontrol etme mantığı
+  const lastCheckDate = localStorage.getItem('last_skt_notify_date');
+  const todayStr = new Date().toDateString();
+
+  // Eğer bugün zaten bildirim attıysak tekrar rahatsız etme
+  if (lastCheckDate === todayStr) return; 
+
+  // Veritabanından SKT'leri çek
+  const { data: urunler } = await supabase
+    .from('kiler')
+    .select('malzeme_adi, son_kullanma_tarihi');
+
+  if (!urunler) return;
+
+  let kritikUrunSayisi = 0;
+
+  urunler.forEach(item => {
+    if (!item.son_kullanma_tarihi) return;
+    
+    const skt = new Date(item.son_kullanma_tarihi);
+    const bugun = new Date();
+    // Farkı gün cinsinden hesapla (milisaniye -> gün)
+    const fark = Math.ceil((skt - bugun) / (1000 * 60 * 60 * 24));
+
+    // 3 gün ve daha az kalanlar (veya tarihi geçmiş olanlar)
+    if (fark <= 3) {
+      kritikUrunSayisi++;
+    }
+  });
+
+  // Eğer kritik ürün varsa BİLDİRİM GÖNDER
+  if (kritikUrunSayisi > 0) {
+    try {
+      // Tarayıcı/Telefon bildirimi oluştur
+      new Notification("⚠️ Mutfak Asistanı Uyarısı", {
+        body: `Dikkat! ${kritikUrunSayisi} ürünün tarihi geçmek üzere veya geçti. Hemen kontrol et! 🧐`,
+        icon: '/pwa-192x192.png', // Uygulama ikonu
+        vibrate: [200, 100, 200] // Titreşim (Android için)
+      });
+      
+      // Bugün bildirim gönderildiğini kaydet
+      localStorage.setItem('last_skt_notify_date', todayStr);
+    } catch (e) {
+      console.error("Bildirim gönderilemedi:", e);
+    }
+  }
+}
+
 onMounted(() => {
   supabase.auth.getSession().then(({ data }) => {
     session.value = data.session
+    // Oturum açılınca bildirimleri kontrol et
+    if (data.session) checkExpirationAndNotify();
   })
 
   supabase.auth.onAuthStateChange((_, _session) => {
     session.value = _session
+    // Giriş yapıldığında da kontrol et
+    if (_session) checkExpirationAndNotify();
   })
 })
 
 const cikisYap = async () => {
   const { error } = await supabase.auth.signOut()
-  if (error) alert("Çıkış yapılırken hata oldu: " + error.message)
+  if (error) alert("Çıkış hatası: " + error.message)
 }
 </script>
 
 <style>
-/* GENEL AYARLAR */
+/* EVRENSEL SIFIRLAMA (Kaymaları Önler) */
+* {
+  box-sizing: border-box; 
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body { 
   font-family: 'Segoe UI', sans-serif; 
   background: #f8f9fa; 
-  margin: 0; 
-  padding: 0; 
-  color: #222; 
-  -webkit-tap-highlight-color: transparent;
+  overflow: hidden; /* Sayfa kaymasını engelle */
+  width: 100%;
+  height: 100%;
 }
 
 /* MOBİL KONTEYNER */
 .mobile-container { 
-  max-width: 100%; 
-  min-height: 100vh; 
+  position: absolute; 
+  top: 0; left: 0; right: 0; bottom: 0;
   background: white; 
-  position: relative;
+  overflow: hidden;
 }
 
-/* GİRİŞ YAPILINCAKİ DÜZEN (Padding ekleyerek alt menüye yer açıyoruz) */
-.app-wrapper {
-  padding-bottom: 80px; 
-}
-
-/* ÜST BİLGİ ÇUBUĞU */
-.top-bar {
+.app-layout {
   display: flex;
-  justify-content: space-between; /* Biri sağa biri sola */
-  align-items: center;
-  /* DÜZELTME: Kenar boşlukları azaltıldı */
-  padding: 0 6px; 
-  background: #fff;
-  border-bottom: 1px solid #eee;
-  position: sticky; /* Senin sevdiğin yapı */
-  top: 0;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+/* ÜST BAR (SABİT) */
+.top-bar {
+  flex-shrink: 0;
+  height: 54px;
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 0 15px; 
+  background: #fff; 
+  border-bottom: 1px solid #eee; 
   z-index: 50;
-  height: 60px;
+  width: 100%;
 }
 
 /* HEADER BUTONLARI */
 .header-btn {
-  border: none;
-  border-radius: 20px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
+  border: none; 
+  border-radius: 8px; 
+  padding: 0 12px; 
+  font-size: 12px; 
+  font-weight: 700; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
   gap: 5px;
   height: 36px;
   transition: transform 0.1s;
 }
 .header-btn:active { transform: scale(0.95); }
 
-/* SİHİRLİ LİSTE BUTONU */
+/* Renkli Liste Butonu */
 .magic-btn {
   color: white;
-  /* Renk Dalgalanması */
   background: linear-gradient(270deg, #f59e0b, #ec4899, #8b5cf6, #f59e0b);
   background-size: 300% 300%;
   animation: colorWave 4s ease infinite;
@@ -168,64 +241,56 @@ body {
   100% { background-position: 0% 50% }
 }
 
-.logout-btn {
-  background: #fff0f0;
-  border: 1px solid #ffcdd2;
-  color: #c62828;
-  border-radius: 6px; /* Çıkış butonu daha köşeli kalsın karışmasın */
+.logout-btn { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; }
+
+/* İÇERİK ALANI */
+.content-area {
+  flex: 1; 
+  position: relative;
+  overflow: hidden; 
+  background: #f8f9fa;
+  width: 100%;
 }
 
 /* ALT MENÜ TASARIMI */
 .bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 70px;
-  background: white;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-  border-top: 1px solid #eee;
-  z-index: 1000;
+  flex-shrink: 0;
+  height: 70px; 
+  background: white; 
+  display: flex; 
+  justify-content: space-around; 
+  align-items: center; 
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05); 
+  border-top: 1px solid #eee; 
+  z-index: 1000; 
   padding-bottom: env(safe-area-inset-bottom);
+  position: relative; 
+  width: 100%;
 }
 
-.nav-item {
-  flex: 1;
-  border: none;
-  background: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  cursor: pointer;
-  color: #999;
-  transition: all 0.3s ease;
+.nav-item { 
+  flex: 1; 
+  border: none; 
+  background: none; 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 4px; 
+  cursor: pointer; 
+  color: #999; 
+  transition: all 0.3s ease; 
 }
 
 .nav-item .icon { font-size: 24px; filter: grayscale(100%); transition: 0.3s; }
 .nav-item .label { font-size: 11px; font-weight: 600; }
 
-/* Aktif Sekme */
 .nav-item.active { color: #000; }
-.nav-item.active .icon { filter: grayscale(0%); transform: scale(1.2); }
+.nav-item.active .icon { filter: grayscale(0%); transform: scale(1.1); }
 
 .divider { width: 1px; height: 30px; background: #eee; }
 
 /* GEÇİŞ ANİMASYONU */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
-
-/* --- GLOBAL İÇERİK GENİŞLETME --- */
-/* Kiler ve Tarif sayfalarının içindeki paddingleri ezerek ekranı tam kaplamasını sağla */
-.header-content, 
-.scrollable-list,
-.view-container .scroll-content,
-.view-container .fixed-header {
-  padding-left: 6px !important;
-  padding-right: 6px !important;
-}
 </style>
