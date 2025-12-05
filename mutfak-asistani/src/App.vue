@@ -1,189 +1,147 @@
 <template>
   <div class="mobile-container">
-  
-      <!-- 1. DURUM: GİRİŞ YAPILMAMIŞSA (Login Ekranı) -->
-          <div v-if="!session" class="login-wrapper">
-                <LoginView />
-                    </div>
-                    
-                        <!-- 2. DURUM: GİRİŞ YAPILMIŞSA (Ana Uygulama) -->
-                            <div v-else class="app-wrapper">
-                                  
-                                        <!-- Üst Bilgi Çubuğu (Email ve Çıkış) -->
-                                              <header class="top-bar">
-                                                      <span class="user-info">👤 {{ session.user.email }}</span>
-                                                              <button @click="cikisYap" class="logout-btn">Çıkış Yap 🚪</button>
-                                                                    </header>
-                                                                    
-                                                                          <!-- İçerik Alanı -->
-                                                                                <div class="content-area">
-                                                                                        <Transition name="fade" mode="out-in">
-                                                                                                  <KilerView v-if="currentView === 'kiler'" />
-                                                                                                            <TariflerView v-else-if="currentView === 'tarifler'" />
-                                                                                                                    </Transition>
-                                                                                                                          </div>
-                                                                                                                          
-                                                                                                                                <!-- Alt Menü -->
-                                                                                                                                      <nav class="bottom-nav">
-                                                                                                                                              <button 
-                                                                                                                                                        @click="currentView = 'kiler'" 
-                                                                                                                                                                  class="nav-item" 
-                                                                                                                                                                            :class="{ active: currentView === 'kiler' }"
-                                                                                                                                                                                    >
-                                                                                                                                                                                              <span class="icon">📦</span>
-                                                                                                                                                                                                        <span class="label">Kilerim</span>
-                                                                                                                                                                                                                </button>
-                                                                                                                                                                                                                
-                                                                                                                                                                                                                        <div class="divider"></div>
-                                                                                                                                                                                                                        
-                                                                                                                                                                                                                                <button 
-                                                                                                                                                                                                                                          @click="currentView = 'tarifler'" 
-                                                                                                                                                                                                                                                    class="nav-item" 
-                                                                                                                                                                                                                                                              :class="{ active: currentView === 'tarifler' }"
-                                                                                                                                                                                                                                                                      >
-                                                                                                                                                                                                                                                                                <span class="icon">👨‍🍳</span>
-                                                                                                                                                                                                                                                                                          <span class="label">Şefin Menüsü</span>
-                                                                                                                                                                                                                                                                                                  </button>
-                                                                                                                                                                                                                                                                                                        </nav>
-                                                                                                                                                                                                                                                                                                        
-                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                            
-                                                                                                                                                                                                                                                                                                              </div>
-                                                                                                                                                                                                                                                                                                              </template>
-                                                                                                                                                                                                                                                                                                              
-                                                                                                                                                                                                                                                                                                              <script setup>
-                                                                                                                                                                                                                                                                                                              import { ref, onMounted } from 'vue'
-                                                                                                                                                                                                                                                                                                              import { supabase } from './supabase'
-                                                                                                                                                                                                                                                                                                              import KilerView from './components/KilerView.vue'
-                                                                                                                                                                                                                                                                                                              import TariflerView from './components/TariflerView.vue'
-                                                                                                                                                                                                                                                                                                              import LoginView from './components/LoginView.vue'
-                                                                                                                                                                                                                                                                                                              
-                                                                                                                                                                                                                                                                                                              const currentView = ref('kiler')
-                                                                                                                                                                                                                                                                                                              const session = ref(null)
-                                                                                                                                                                                                                                                                                                              
-                                                                                                                                                                                                                                                                                                              onMounted(() => {
-                                                                                                                                                                                                                                                                                                                  // 1. Sayfa ilk açıldığında oturum kontrolü
-                                                                                                                                                                                                                                                                                                                    supabase.auth.getSession().then(({ data }) => {
-                                                                                                                                                                                                                                                                                                                          session.value = data.session
-                                                                                                                                                                                                                                                                                                                    })
 
-                                                                                                                                                                                                                                                                                                                      // 2. Oturum durumunu dinle (Giriş veya Çıkış anında tetiklenir)
-                                                                                                                                                                                                                                                                                                                        supabase.auth.onAuthStateChange((_, _session) => {
-                                                                                                                                                                                                                                                                                                                              session.value = _session
-                                                                                                                                                                                                                                                                                                                        })
-                                                                                                                                                                                                                                                                                                              })
+    <!-- 1. DURUM: GİRİŞ YAPILMAMIŞSA -->
+    <div v-if="!session" class="login-wrapper">
+      <LoginView />
+    </div>
 
-                                                                                                                                                                                                                                                                                                              const cikisYap = async () => {
-                                                                                                                                                                                                                                                                                                                  const { error } = await supabase.auth.signOut()
-                                                                                                                                                                                                                                                                                                                    if (error) alert("Çıkış yapılırken hata oldu: " + error.message)
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                              </script>
+    <!-- 2. DURUM: GİRİŞ YAPILMIŞSA -->
+    <div v-else class="app-layout">
+      
+      <!-- SABİT ÜST BAR -->
+      <header class="top-bar">
+        <span class="user-info">👤 {{ session.user.email?.split('@')[0] }}</span>
+        <button @click="cikisYap" class="logout-btn">Çıkış</button>
+      </header>
 
-                                                                                                                                                                                                                                                                                                              <style>
-                                                                                                                                                                                                                                                                                                              /* GENEL AYARLAR */
-                                                                                                                                                                                                                                                                                                              body { 
-                                                                                                                                                                                                                                                                                                                  font-family: 'Segoe UI', sans-serif; 
-                                                                                                                                                                                                                                                                                                                    background: #f8f9fa; 
-                                                                                                                                                                                                                                                                                                                      margin: 0; 
-                                                                                                                                                                                                                                                                                                                        padding: 0;
-                                                                                                                                                                                                                                                                                                                          color: #222; 
-                                                                                                                                                                                                                                                                                                                            -webkit-tap-highlight-color: transparent;
-                                                                                                                                                                                                                                                                                                              }
+      <!-- İÇERİK ALANI -->
+      <main class="content-area">
+        <Transition name="fade" mode="out-in">
+          <KeepAlive>
+            <!-- Dinamik Component Seçimi -->
+            <component :is="currentComponent" />
+          </KeepAlive>
+        </Transition>
+      </main>
 
-                                                                                                                                                                                                                                                                                                              /* MOBİL KONTEYNER */
-                                                                                                                                                                                                                                                                                                              .mobile-container { 
-                                                                                                                                                                                                                                                                                                                  max-width: 100%; 
-                                                                                                                                                                                                                                                                                                                    min-height: 100vh; 
-                                                                                                                                                                                                                                                                                                                      background: white; 
-                                                                                                                                                                                                                                                                                                                        position: relative;
-                                                                                                                                                                                                                                                                                                              }
+      <!-- SABİT ALT MENÜ -->
+      <nav class="bottom-nav">
+        <button 
+          @click="currentView = 'kiler'" 
+          class="nav-item" 
+          :class="{ active: currentView === 'kiler' }"
+        >
+          <span class="icon">📦</span>
+          <span class="label">Kiler</span>
+        </button>
+        
+        <div class="divider"></div>
 
-                                                                                                                                                                                                                                                                                                              /* GİRİŞ YAPILINCAKİ DÜZEN (Padding ekleyerek alt menüye yer açıyoruz) */
-                                                                                                                                                                                                                                                                                                              .app-wrapper {
-                                                                                                                                                                                                                                                                                                                  padding-bottom: 80px; 
-                                                                                                                                                                                                                                                                                                              }
+        <!-- YENİ: ALIŞVERİŞ LİSTESİ BUTONU -->
+        <button 
+          @click="currentView = 'alisveris'" 
+          class="nav-item" 
+          :class="{ active: currentView === 'alisveris' }"
+        >
+          <span class="icon">📝</span>
+          <span class="label">Liste</span>
+        </button>
 
-                                                                                                                                                                                                                                                                                                              /* ÜST BİLGİ ÇUBUĞU (YENİ) */
-                                                                                                                                                                                                                                                                                                              .top-bar {
-                                                                                                                                                                                                                                                                                                                  display: flex;
-                                                                                                                                                                                                                                                                                                                    justify-content: space-between;
-                                                                                                                                                                                                                                                                                                                      align-items: center;
-                                                                                                                                                                                                                                                                                                                        padding: 10px 15px;
-                                                                                                                                                                                                                                                                                                                          background: #fff;
-                                                                                                                                                                                                                                                                                                                            border-bottom: 1px solid #eee;
-                                                                                                                                                                                                                                                                                                                              position: sticky;
-                                                                                                                                                                                                                                                                                                                                top: 0;
-                                                                                                                                                                                                                                                                                                                                  z-index: 50;
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                              .user-info {
-                                                                                                                                                                                                                                                                                                                  font-size: 12px;
-                                                                                                                                                                                                                                                                                                                    color: #555;
-                                                                                                                                                                                                                                                                                                                      font-weight: bold;
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                              .logout-btn {
-                                                                                                                                                                                                                                                                                                                  background: #fff0f0;
-                                                                                                                                                                                                                                                                                                                    border: 1px solid #ffcdd2;
-                                                                                                                                                                                                                                                                                                                      color: #c62828;
-                                                                                                                                                                                                                                                                                                                        padding: 5px 10px;
-                                                                                                                                                                                                                                                                                                                          border-radius: 6px;
-                                                                                                                                                                                                                                                                                                                            cursor: pointer;
-                                                                                                                                                                                                                                                                                                                              font-size: 11px;
-                                                                                                                                                                                                                                                                                                                                font-weight: bold;
-                                                                                                                                                                                                                                                                                                              }
+        <div class="divider"></div>
 
-                                                                                                                                                                                                                                                                                                              /* ALT MENÜ TASARIMI */
-                                                                                                                                                                                                                                                                                                              .bottom-nav {
-                                                                                                                                                                                                                                                                                                                  position: fixed;
-                                                                                                                                                                                                                                                                                                                    bottom: 0;
-                                                                                                                                                                                                                                                                                                                      left: 0;
-                                                                                                                                                                                                                                                                                                                        width: 100%;
-                                                                                                                                                                                                                                                                                                                          height: 70px;
-                                                                                                                                                                                                                                                                                                                            background: white;
-                                                                                                                                                                                                                                                                                                                              display: flex;
-                                                                                                                                                                                                                                                                                                                                justify-content: space-around;
-                                                                                                                                                                                                                                                                                                                                  align-items: center;
-                                                                                                                                                                                                                                                                                                                                    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-                                                                                                                                                                                                                                                                                                                                      border-top: 1px solid #eee;
-                                                                                                                                                                                                                                                                                                                                        z-index: 1000;
-                                                                                                                                                                                                                                                                                                                                          padding-bottom: env(safe-area-inset-bottom);
-                                                                                                                                                                                                                                                                                                              }
+        <button 
+          @click="currentView = 'tarifler'" 
+          class="nav-item" 
+          :class="{ active: currentView === 'tarifler' }"
+        >
+          <span class="icon">👨‍🍳</span>
+          <span class="label">Şef</span>
+        </button>
+      </nav>
 
-                                                                                                                                                                                                                                                                                                              .nav-item {
-                                                                                                                                                                                                                                                                                                                  flex: 1;
-                                                                                                                                                                                                                                                                                                                    border: none;
-                                                                                                                                                                                                                                                                                                                      background: none;
-                                                                                                                                                                                                                                                                                                                        display: flex;
-                                                                                                                                                                                                                                                                                                                          flex-direction: column;
-                                                                                                                                                                                                                                                                                                                            align-items: center;
-                                                                                                                                                                                                                                                                                                                              justify-content: center;
-                                                                                                                                                                                                                                                                                                                                gap: 4px;
-                                                                                                                                                                                                                                                                                                                                  cursor: pointer;
-                                                                                                                                                                                                                                                                                                                                    color: #999;
-                                                                                                                                                                                                                                                                                                                                      transition: all 0.3s ease;
-                                                                                                                                                                                                                                                                                                              }
+    </div>
 
-                                                                                                                                                                                                                                                                                                              .nav-item .icon { font-size: 24px; filter: grayscale(100%); transition: 0.3s; }
-                                                                                                                                                                                                                                                                                                              .nav-item .label { font-size: 11px; font-weight: 600; }
+  </div>
+</template>
 
-                                                                                                                                                                                                                                                                                                              /* Aktif Sekme */
-                                                                                                                                                                                                                                                                                                              .nav-item.active { color: #000; }
-                                                                                                                                                                                                                                                                                                              .nav-item.active .icon { filter: grayscale(0%); transform: scale(1.2); }
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { supabase } from './supabase'
+import KilerView from './components/KilerView.vue'
+import TariflerView from './components/TariflerView.vue'
+import AlisverisView from './components/AlisverisView.vue' // YENİ
+import LoginView from './components/LoginView.vue'
 
-                                                                                                                                                                                                                                                                                                              .divider { width: 1px; height: 30px; background: #eee; }
+const currentView = ref('kiler')
+const session = ref(null)
 
-                                                                                                                                                                                                                                                                                                              /* GEÇİŞ ANİMASYONU */
-                                                                                                                                                                                                                                                                                                              .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
-                                                                                                                                                                                                                                                                                                              .fade-enter-from, .fade-leave-to { opacity: 0; }
-                                                                                                                                                                                                                                                                                                              </style>
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                                        })
-                                                                                                                                                                                                                                                                                                                    })
-                                                                                                                                                                                                                                                                                                              })>
+// View'a göre component seçimi
+const currentComponent = computed(() => {
+  if (currentView.value === 'kiler') return KilerView
+  if (currentView.value === 'tarifler') return TariflerView
+  if (currentView.value === 'alisveris') return AlisverisView // YENİ
+  return KilerView
+})
+
+onMounted(() => {
+  supabase.auth.getSession().then(({ data }) => session.value = data.session)
+  supabase.auth.onAuthStateChange((_, _session) => session.value = _session)
+})
+
+const cikisYap = async () => {
+  const { error } = await supabase.auth.signOut()
+  if (error) alert(error.message)
+}
+</script>
+
+<style>
+/* GENEL RESET */
+body { 
+  margin: 0; padding: 0; 
+  background: #fff; 
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden; 
+}
+
+/* ANA DÜZEN */
+.mobile-container {
+  height: 100vh; width: 100vw; overflow: hidden;
+}
+
+.app-layout {
+  display: flex; flex-direction: column; height: 100%;
+}
+
+/* ÜST BAR */
+.top-bar {
+  flex-shrink: 0; height: 50px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 15px; background: white; border-bottom: 1px solid #f0f0f0; z-index: 20;
+}
+.user-info { font-weight: 700; font-size: 13px; color: #333; }
+.logout-btn { background: #fee2e2; color: #ef4444; border:none; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;}
+
+/* İÇERİK ALANI */
+.content-area {
+  flex: 1; position: relative; overflow: hidden; background: #f8f9fa;
+}
+
+/* ALT MENÜ */
+.bottom-nav {
+  flex-shrink: 0; height: 70px; padding-bottom: env(safe-area-inset-bottom);
+  background: white; border-top: 1px solid #eee;
+  display: flex; justify-content: space-around; align-items: center; z-index: 20;
+}
+
+.nav-item { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 2px; color: #aaa; cursor: pointer; flex: 1; }
+.nav-item.active { color: #000; }
+.nav-item .icon { font-size: 22px; filter: grayscale(1); transition: transform 0.2s; }
+.nav-item.active .icon { filter: grayscale(0); transform: scale(1.2); }
+.nav-item .label { font-size: 10px; font-weight: 700; }
+
+.divider { width: 1px; height: 24px; background: #eee; }
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+</style>
