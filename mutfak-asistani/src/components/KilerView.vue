@@ -1,10 +1,16 @@
 <template>
   <div class="kiler-container">
     
-    <!-- 1. SABİT ÜST KISIM (EKLEME FORMU) -->
+    <!-- 1. SABİT ÜST KISIM -->
     <div class="sticky-header">
       <div class="header-content">
-        <h3 class="mini-title">Hızlı Ürün Ekle</h3>
+        <!-- BAŞLIK VE PAYLAŞ BUTONU SATIRI -->
+        <div class="header-top-row">
+           <h3 class="mini-title">Hızlı Ürün Ekle</h3>
+           <button @click="isShareModalOpen = true" class="share-top-btn">
+             📤 Listeyi Paylaş
+           </button>
+        </div>
         
         <!-- İsim ve AI Butonu Satırı -->
         <div class="form-row">
@@ -27,7 +33,6 @@
             <option v-for="yer in depoYerleri" :key="yer" :value="yer">{{ yer }}</option>
           </select>
           
-          <!-- Hesaplamalı Miktar (Paket x Ağırlık) -->
           <div class="calc-group">
             <input v-model="yeniMalzeme.paketSayisi" type="number" class="qty-input white-bg" placeholder="1">
             <span class="x-sign">✖</span>
@@ -48,22 +53,14 @@
             <option value="şişe">Şişe</option>
           </select>
           
-          <!-- DÜZELTME: SKT Alanı Artık Placeholder Destekli -->
-          <input 
-            v-model="yeniMalzeme.skt" 
-            :type="sktInputType" 
-            class="sub-input date-input"
-            placeholder="📅 SKT Seç"
-            @focus="sktInputType = 'date'"
-            @blur="!yeniMalzeme.skt ? sktInputType = 'text' : null"
-          >
+          <input v-model="yeniMalzeme.skt" type="date" class="sub-input date-input">
           
           <button @click="malzemeEkle" class="add-btn">
             Ekle ({{ toplamStokHesapla }})
           </button>
         </div>
 
-        <!-- FİLTRE (DROPDOWN) -->
+        <!-- FİLTRE -->
         <div class="filter-row">
           <label class="filter-label">🔍 Filtrele:</label>
           <select v-model="seciliKonumFiltresi" class="filter-select">
@@ -95,7 +92,6 @@
             'bayat': sktGectiMi(item.son_kullanma_tarihi) 
           }"
         >
-          <!-- ÜST KISIM: Bilgiler (Solda) ve Resim (Sağda) -->
           <div class="card-top">
             <!-- SOL: Bilgiler -->
             <div class="info-col">
@@ -105,7 +101,6 @@
                 {{ item.miktar }} {{ item.birim }}
                 <span v-if="stokAzMi(item)" class="alert-text">⚠️ AZ KALDI</span>
               </div>
-              <!-- SKT TARİHİ -->
               <div class="p-skt" v-if="item.son_kullanma_tarihi">
                  📅 SKT: {{ formatTarih(item.son_kullanma_tarihi) }}
               </div>
@@ -122,7 +117,7 @@
             </div>
           </div>
 
-          <!-- ALT KISIM: Butonlar -->
+          <!-- ALT: Butonlar -->
           <div class="card-actions">
             <button @click="openConsumeModal(item)" class="use-btn">
               <span class="red-arrow">🔻</span> Kullan
@@ -135,33 +130,47 @@
       <div class="bottom-spacer"></div>
     </div>
 
-    <!-- 3. TÜKETİM PENCERESİ (MODAL) -->
+    <!-- 3. MODALLER -->
+    
+    <!-- TÜKETİM MODALI -->
     <div v-if="isConsumeModalOpen" class="modal-overlay" @click.self="isConsumeModalOpen = false">
       <div class="modal-content">
         <div class="modal-header">
           <h3>Ne kadar kullandın?</h3>
           <button @click="isConsumeModalOpen = false" class="close-modal">✕</button>
         </div>
-        
         <div class="modal-body">
           <p class="modal-item-name">{{ selectedItemToConsume?.malzeme_adi }}</p>
           <div class="modal-input-group">
-            <input 
-              type="number" 
-              v-model="consumeAmount" 
-              class="modal-input white-bg" 
-              placeholder="0" 
-              ref="consumeInput"
-              @keyup.enter="confirmConsume"
-            >
+            <input type="number" v-model="consumeAmount" class="modal-input white-bg" placeholder="0" ref="consumeInput" @keyup.enter="confirmConsume">
             <span class="modal-unit">{{ selectedItemToConsume?.birim }}</span>
           </div>
           <p class="modal-hint">Mevcut Stok: {{ selectedItemToConsume?.miktar }}</p>
         </div>
-
         <div class="modal-footer">
           <button @click="isConsumeModalOpen = false" class="modal-btn cancel">İptal</button>
           <button @click="confirmConsume" class="modal-btn confirm">Stoktan Düş</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYLAŞIM MODALI -->
+    <div v-if="isShareModalOpen" class="modal-overlay" @click.self="isShareModalOpen = false">
+      <div class="modal-content share-modal">
+        <div class="modal-header">
+          <h3>📦 Listeyi Paylaş</h3>
+          <button @click="isShareModalOpen = false" class="close-modal">✕</button>
+        </div>
+        <div class="share-options">
+          <button @click="shareToWhatsApp" class="share-btn whatsapp">
+            <span>💬 WhatsApp ile Gönder</span>
+          </button>
+          <button @click="downloadExcel" class="share-btn excel">
+            <span>📊 Excel Olarak İndir</span>
+          </button>
+          <button @click="copyList" class="share-btn copy">
+            <span>📋 Metin Olarak Kopyala</span>
+          </button>
         </div>
       </div>
     </div>
@@ -179,14 +188,14 @@ const loading = ref(true)
 const aiLoading = ref(false)
 const seciliKonumFiltresi = ref("Hepsi")
 
-// SKT Input Tipi (Başlangıçta text görünür ki placeholder çıksın)
-const sktInputType = ref('text')
-
 // Modal State
 const isConsumeModalOpen = ref(false)
 const selectedItemToConsume = ref(null)
 const consumeAmount = ref('')
 const consumeInput = ref(null)
+
+// Paylaşım State
+const isShareModalOpen = ref(false)
 
 const depoYerleri = [
   "Buzdolabı Üst Raf", "Buzdolabı Ara Raf", "Buzdolabı Alt Raf", 
@@ -199,13 +208,7 @@ const filtreSecenekleri = [
 ]
 
 const yeniMalzeme = ref({ 
-  ad: '', 
-  konum: 'Buzdolabı Üst Raf', 
-  paketSayisi: 1, 
-  paketAgirligi: 1, 
-  birim: 'adet', 
-  skt: '', 
-  resim: '' 
+  ad: '', konum: 'Buzdolabı Üst Raf', paketSayisi: 1, paketAgirligi: 1, birim: 'adet', skt: '', resim: '' 
 })
 
 // --- COMPUTED ---
@@ -215,7 +218,6 @@ const toplamStokHesapla = computed(() => {
 
 const siraliVeFiltreliListe = computed(() => {
   let liste = kiler.value
-
   if (seciliKonumFiltresi.value !== 'Hepsi') {
     if (seciliKonumFiltresi.value === 'Tüm Buzdolabı') {
       liste = liste.filter(i => i.depo_yer && i.depo_yer.includes('Buzdolabı'))
@@ -223,18 +225,15 @@ const siraliVeFiltreliListe = computed(() => {
       liste = liste.filter(i => i.depo_yer === seciliKonumFiltresi.value)
     }
   }
-
   return liste.sort((a, b) => {
     const aExpired = sktGectiMi(a.son_kullanma_tarihi)
     const bExpired = sktGectiMi(b.son_kullanma_tarihi)
     if (aExpired && !bExpired) return -1
     if (!aExpired && bExpired) return 1
-
     const aLow = stokAzMi(a)
     const bLow = stokAzMi(b)
     if (aLow && !bLow) return -1
     if (!aLow && bLow) return 1
-
     if (a.son_kullanma_tarihi && b.son_kullanma_tarihi) {
       return new Date(a.son_kullanma_tarihi) - new Date(b.son_kullanma_tarihi)
     }
@@ -242,7 +241,63 @@ const siraliVeFiltreliListe = computed(() => {
   })
 })
 
-// --- FONKSİYONLAR ---
+// --- PAYLAŞIM FONKSİYONLARI ---
+
+const getFormattedList = () => {
+  const tarih = new Date().toLocaleDateString('tr-TR');
+  let text = `📦 *Kiler Stok Listesi - ${tarih}*\n\n`;
+  
+  const gruplar = {};
+  kiler.value.forEach(item => {
+    if(!gruplar[item.depo_yer]) gruplar[item.depo_yer] = [];
+    gruplar[item.depo_yer].push(item);
+  });
+
+  for (const [yer, urunler] of Object.entries(gruplar)) {
+    text += `*📍 ${yer}*\n`;
+    urunler.forEach(u => {
+      text += `- ${u.malzeme_adi}: ${u.miktar} ${u.birim}`;
+      if(u.son_kullanma_tarihi) text += ` (SKT: ${formatTarih(u.son_kullanma_tarihi)})`;
+      text += `\n`;
+    });
+    text += `\n`;
+  }
+  return text;
+}
+
+const shareToWhatsApp = () => {
+  const text = getFormattedList();
+  const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+  isShareModalOpen.value = false;
+}
+
+const downloadExcel = () => {
+  let csvContent = "\uFEFFÜrün Adı,Konum,Miktar,Birim,SKT\n";
+  kiler.value.forEach(item => {
+    const skt = item.son_kullanma_tarihi ? formatTarih(item.son_kullanma_tarihi) : '-';
+    csvContent += `"${item.malzeme_adi}","${item.depo_yer}",${item.miktar},"${item.birim}","${skt}"\n`;
+  });
+
+  const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "ev_envanteri.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  isShareModalOpen.value = false;
+}
+
+const copyList = () => {
+  const text = getFormattedList();
+  navigator.clipboard.writeText(text).then(() => {
+    alert("Liste kopyalandı! İstediğin yere yapıştırabilirsin.");
+    isShareModalOpen.value = false;
+  });
+}
+
+// --- DİĞER FONKSİYONLAR ---
 async function getKiler() {
   loading.value = true
   const { data, error } = await supabase.from('kiler').select('*').order('created_at', { ascending: false })
@@ -253,25 +308,11 @@ async function getKiler() {
 async function aiResimUret() {
   if(!yeniMalzeme.value.ad) { alert("Önce ürün adını yazmalısın!"); return; }
   aiLoading.value = true
-  
   const arananKelime = yeniMalzeme.value.ad.toLowerCase().trim()
-  const trToEn = { 
-    'domates': 'tomato', 'biber': 'pepper', 'süt': 'milk', 'yumurta': 'egg', 
-    'deterjan': 'detergent', 'salça': 'tomato paste', 'pirinç': 'rice', 
-    'mercimek': 'lentil', 'makarna': 'pasta', 'ekmek': 'bread', 'yoğurt': 'yogurt', 
-    'peynir': 'cheese', 'yağ': 'oil', 'tereyağı': 'butter', 'un': 'flour',
-    'şeker': 'sugar', 'tuz': 'salt', 'kahve': 'coffee', 'çay': 'tea', 
-    'patates': 'potato', 'soğan': 'onion', 'sarımsak': 'garlic', 'tavuk': 'chicken',
-    'et': 'meat', 'kıyma': 'minced meat', 'sucuk': 'turkish sausage', 'salam': 'salami',
-    'sosis': 'sausage', 'bal': 'honey', 'reçel': 'jam', 'zeytin': 'olive',
-    'tuvalet kağıdı': 'toilet paper', 'kağıt havlu': 'paper towel', 'şampuan': 'shampoo',
-    'sabun': 'soap', 'diş macunu': 'toothpaste'
-  } 
-  
+  const trToEn = { 'domates': 'tomato', 'biber': 'pepper', 'süt': 'milk', 'yumurta': 'egg', 'deterjan': 'detergent', 'salça': 'tomato paste', 'pirinç': 'rice', 'mercimek': 'lentil', 'makarna': 'pasta', 'ekmek': 'bread', 'yoğurt': 'yogurt', 'peynir': 'cheese', 'yağ': 'oil', 'tereyağı': 'butter', 'un': 'flour', 'şeker': 'sugar', 'tuz': 'salt', 'kahve': 'coffee', 'çay': 'tea', 'patates': 'potato', 'soğan': 'onion', 'sarımsak': 'garlic', 'tavuk': 'chicken', 'et': 'meat', 'kıyma': 'minced meat', 'sucuk': 'turkish sausage', 'salam': 'salami', 'sosis': 'sausage', 'bal': 'honey', 'reçel': 'jam', 'zeytin': 'olive', 'tuvalet kağıdı': 'toilet paper', 'kağıt havlu': 'paper towel', 'şampuan': 'shampoo', 'sabun': 'soap', 'diş macunu': 'toothpaste' } 
   const ingilizceIsim = trToEn[arananKelime] || arananKelime
   const prompt = `${ingilizceIsim} product packaging, grocery item, isolated on white background, high quality, studio lighting, 4k`
   const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=300&height=300&nologo=true`
-  
   await new Promise(r => setTimeout(r, 1000))
   yeniMalzeme.value.resim = aiUrl
   aiLoading.value = false
@@ -280,20 +321,14 @@ async function aiResimUret() {
 async function malzemeEkle() {
   if (!yeniMalzeme.value.ad) return alert("İsim yazmalısın!")
   if (!yeniMalzeme.value.resim) await aiResimUret()
-
   const { error } = await supabase.from('kiler').insert({
-    malzeme_adi: yeniMalzeme.value.ad,
-    miktar: toplamStokHesapla.value, 
-    birim: yeniMalzeme.value.birim,
-    son_kullanma_tarihi: yeniMalzeme.value.skt || null,
-    resim_url: yeniMalzeme.value.resim,
-    depo_yer: yeniMalzeme.value.konum
+    malzeme_adi: yeniMalzeme.value.ad, miktar: toplamStokHesapla.value, 
+    birim: yeniMalzeme.value.birim, son_kullanma_tarihi: yeniMalzeme.value.skt || null,
+    resim_url: yeniMalzeme.value.resim, depo_yer: yeniMalzeme.value.konum
   })
-  
   if (!error) {
     const eskiKonum = yeniMalzeme.value.konum
     yeniMalzeme.value = { ad: '', paketSayisi: 1, paketAgirligi: 1, birim: 'adet', skt: '', resim: '', konum: eskiKonum }
-    sktInputType.value = 'text' // Reset placeholder
     getKiler()
   } else { alert("Hata: " + error.message) }
 }
@@ -302,26 +337,18 @@ function openConsumeModal(item) {
   selectedItemToConsume.value = item
   consumeAmount.value = '' 
   isConsumeModalOpen.value = true
-  nextTick(() => {
-    if(consumeInput.value) consumeInput.value.focus()
-  })
+  nextTick(() => { if(consumeInput.value) consumeInput.value.focus() })
 }
 
 async function confirmConsume() {
   if (!selectedItemToConsume.value || !consumeAmount.value) return
   const miktar = parseFloat(consumeAmount.value)
   if (isNaN(miktar) || miktar <= 0) { alert("Geçerli bir miktar girin."); return; }
-
   const currentItem = selectedItemToConsume.value
   const yeniMiktar = Math.max(0, currentItem.miktar - miktar)
-
   if (yeniMiktar === 0) {
-    if (confirm(`${currentItem.malzeme_adi} bitti. Listeden silinsin mi?`)) {
-      malzemeSil(currentItem.id)
-    } else {
-      await stokGuncelle(currentItem.id, 0)
-      updateLocalList(currentItem.id, 0)
-    }
+    if (confirm(`${currentItem.malzeme_adi} bitti. Listeden silinsin mi?`)) { malzemeSil(currentItem.id) } 
+    else { await stokGuncelle(currentItem.id, 0); updateLocalList(currentItem.id, 0) }
   } else {
     await stokGuncelle(currentItem.id, yeniMiktar)
     updateLocalList(currentItem.id, yeniMiktar)
@@ -356,10 +383,8 @@ function stokAzMi(item) {
 
 function sktGectiMi(tarihStr) { 
   if(!tarihStr) return false
-  const bugun = new Date(); 
-  bugun.setHours(0,0,0,0); 
-  const skt = new Date(tarihStr); 
-  return skt < bugun 
+  const bugun = new Date(); bugun.setHours(0,0,0,0); 
+  const skt = new Date(tarihStr); return skt < bugun 
 }
 
 function formatTarih(tarihStr) {
@@ -368,9 +393,7 @@ function formatTarih(tarihStr) {
   return date.toLocaleDateString('tr-TR')
 }
 
-onMounted(() => {
-  getKiler()
-})
+onMounted(() => { getKiler() })
 </script>
 
 <style scoped>
@@ -386,22 +409,19 @@ onMounted(() => {
 }
 
 .header-content { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+
+/* ÜST BAŞLIK SATIRI */
+.header-top-row { display: flex; justify-content: space-between; align-items: center; }
 .mini-title { margin: 0; font-size: 13px; color: #888; text-transform: uppercase; font-weight: 700; }
+.share-top-btn { 
+  background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; 
+  padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;
+}
 
 .form-row { display: flex; gap: 6px; width: 100%; }
 .input-with-btn { display: flex; flex: 1; gap: 5px; }
-.main-input { 
-  flex: 1; 
-  padding: 10px; 
-  background: #f3f4f6; 
-  border: none; 
-  border-radius: 10px; 
-  font-weight: 600; 
-  font-size: 15px; 
-  color: #111827; 
-}
+.main-input { flex: 1; padding: 10px; background: #f3f4f6; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; color: #111827; }
 .ai-btn { width: 40px; background: #8b5cf6; color: white; border: none; border-radius: 10px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
 .sub-input { padding: 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; color: #374151; }
 .location-select { flex: 2; }
 .unit-select { flex: 1.5; }
@@ -422,57 +442,25 @@ onMounted(() => {
 .product-grid { display: flex; flex-direction: column; gap: 10px; }
 
 .product-card {
-  background: white; 
-  padding: 12px; 
-  border-radius: 16px;
-  display: flex; 
-  flex-direction: column; 
-  border: 1px solid #f3f4f6; 
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-  transition: transform 0.1s;
-  gap: 10px;
+  background: white; padding: 12px; border-radius: 16px;
+  display: flex; flex-direction: column; border: 1px solid #f3f4f6; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: transform 0.1s; gap: 10px;
 }
-
-.card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  gap: 15px;
-}
+.card-top { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 15px; }
 
 @keyframes blink-red {
   0% { border-color: #fca5a5; background-color: #fff1f2; }
   50% { border-color: #ef4444; background-color: #ffe4e6; }
   100% { border-color: #fca5a5; background-color: #fff1f2; }
 }
-
-.product-card.kritik-yanip-son {
-  animation: blink-red 2s infinite ease-in-out;
-  border: 2px solid #ef4444;
-}
-
+.product-card.kritik-yanip-son { animation: blink-red 2s infinite ease-in-out; border: 2px solid #ef4444; }
 .product-card.bayat { opacity: 0.6; filter: grayscale(0.8); border: 1px solid #999; }
 
-.img-box { 
-  position: relative; 
-  width: 110px; 
-  height: 110px; 
-  border-radius: 12px; 
-  overflow: hidden; 
-  background: #f3f4f6; 
-  flex-shrink: 0; 
-}
+.img-box { position: relative; width: 110px; height: 110px; border-radius: 12px; overflow: hidden; background: #f3f4f6; flex-shrink: 0; }
 .product-img { width: 100%; height: 100%; object-fit: cover; }
 .expire-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(220,38,38,0.9); color: white; font-size: 8px; text-align: center; font-weight: bold; padding: 1px; }
 
-.info-col { 
-  flex: 1; 
-  display: flex; 
-  flex-direction: column; 
-  gap: 4px;
-  align-items: flex-start; 
-}
+.info-col { flex: 1; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .p-name { font-weight: 800; font-size: 18px; color: #111827; white-space: normal; line-height: 1.2; }
 .p-loc { font-size: 13px; color: #4b5563; font-weight: 600; }
 .p-qty { font-size: 15px; font-weight: 800; color: #374151; display: flex; align-items: center; gap: 4px; }
@@ -480,63 +468,15 @@ onMounted(() => {
 .alert-text { font-size: 11px; background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: 700;}
 .p-skt { font-size: 12px; color: #059669; font-weight: 700; margin-top: 2px; }
 
-.card-actions { 
-  display: flex; 
-  gap: 10px; 
-  align-items: center; 
-  width: 100%; 
-  border-top: 1px solid #f3f4f6;
-  padding-top: 10px;
-}
-
-.action-btn { 
-  height: 40px; 
-  border-radius: 8px; 
-  border: none; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  font-size: 15px; 
-  cursor: pointer; 
-  font-weight: 700;
-}
-
-.use-btn {
-  flex: 2; 
-  background: #f1f5f9; 
-  color: #0f172a; 
-  border: 1px solid #cbd5e1; 
-  border-radius: 8px;
-  height: 40px;
-  font-size: 14px; 
-  font-weight: 800; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer; 
-  transition: all 0.2s;
-}
+.card-actions { display: flex; gap: 10px; align-items: center; width: 100%; border-top: 1px solid #f3f4f6; padding-top: 10px; }
+.action-btn { height: 40px; border-radius: 8px; border: none; display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; font-weight: 700; }
+.use-btn { flex: 2; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 8px; height: 40px; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s; }
 .use-btn:active { transform: scale(0.95); background: #e2e8f0; }
 .red-arrow { color: #ef4444; font-size: 14px; }
+.del-btn { flex: 1; background: #fee2e2; color: #ef4444; }
 
-.del-btn { 
-  flex: 1; 
-  background: #fee2e2; 
-  color: #ef4444; 
-}
-
-.modal-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.5); z-index: 100;
-  display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px);
-}
-.modal-content {
-  background: white; width: 85%; max-width: 320px;
-  border-radius: 20px; padding: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  animation: popIn 0.2s ease-out;
-}
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 100; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+.modal-content { background: white; width: 85%; max-width: 320px; border-radius: 20px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out; }
 @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
@@ -546,18 +486,7 @@ onMounted(() => {
 .modal-body { text-align: center; margin-bottom: 20px; }
 .modal-item-name { font-size: 18px; font-weight: 800; color: #111827; margin-bottom: 10px; }
 .modal-input-group { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
-.modal-input { 
-  width: 80px; 
-  padding: 10px; 
-  border: 2px solid #e5e7eb; 
-  border-radius: 12px; 
-  font-size: 20px; 
-  font-weight: bold; 
-  text-align: center; 
-  outline: none;
-  background-color: white; 
-  color: #111827; 
-}
+.modal-input { width: 80px; padding: 10px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 20px; font-weight: bold; text-align: center; outline: none; background-color: white; color: #111827; }
 .modal-input:focus { border-color: #2563eb; }
 .modal-unit { font-size: 16px; color: #6b7280; font-weight: 600; }
 .modal-hint { font-size: 12px; color: #9ca3af; margin: 0; }
@@ -566,6 +495,14 @@ onMounted(() => {
 .modal-btn { flex: 1; padding: 12px; border-radius: 12px; font-weight: bold; font-size: 14px; cursor: pointer; border: none; }
 .modal-btn.cancel { background: #f3f4f6; color: #4b5563; }
 .modal-btn.confirm { background: #2563eb; color: white; }
+
+/* PAYLAŞIM BUTONLARI */
+.share-options { display: flex; flex-direction: column; gap: 10px; }
+.share-btn { padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; text-align: left; display: flex; align-items: center; font-size: 14px; transition: transform 0.1s; }
+.share-btn:active { transform: scale(0.98); }
+.share-btn.whatsapp { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.share-btn.excel { background: #ecfccb; color: #3f6212; border: 1px solid #bef264; }
+.share-btn.copy { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
 
 .empty-state, .loading-state { text-align: center; margin-top: 50px; color: #9ca3af; }
 .empty-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.5; filter: grayscale(1); }
