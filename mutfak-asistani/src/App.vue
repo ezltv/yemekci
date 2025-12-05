@@ -7,11 +7,11 @@
     </div>
 
     <!-- 2. DURUM: GİRİŞ YAPILMIŞSA -->
-    <div v-else class="app-layout">
+    <div v-else class="app-wrapper">
       
-      <!-- ÜST BAR (SABİT) -->
+      <!-- ÜST BAR: Sol: Liste, Sağ: Çıkış -->
       <header class="top-bar">
-        <!-- SOL: Liste Butonu -->
+        <!-- SOL: Alışveriş Listesi Butonu -->
         <button 
           @click="currentView = 'alisveris'" 
           class="header-btn magic-btn"
@@ -24,16 +24,16 @@
         <button @click="cikisYap" class="logout-btn">Çıkış Yap 🚪</button>
       </header>
 
-      <!-- İÇERİK ALANI (ORTA KISIM) -->
-      <main class="content-area">
+      <!-- İÇERİK ALANI -->
+      <div class="content-area">
         <Transition name="fade" mode="out-in">
           <KeepAlive>
             <component :is="activeComponent" />
           </KeepAlive>
         </Transition>
-      </main>
+      </div>
 
-      <!-- ALT MENÜ (SABİT) -->
+      <!-- ALT MENÜ (Sadece 2 Buton: Kiler ve Şef) -->
       <nav class="bottom-nav">
         <button 
           @click="currentView = 'kiler'" 
@@ -91,103 +91,68 @@ onMounted(() => {
 
 const cikisYap = async () => {
   const { error } = await supabase.auth.signOut()
-  if (error) alert("Çıkış hatası: " + error.message)
+  if (error) alert("Çıkış yapılırken hata oldu: " + error.message)
 }
 </script>
 
 <style>
-/* SIFIRLAMA */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* GENEL AYARLAR */
+body { 
+  font-family: 'Segoe UI', sans-serif; 
+  background: #f8f9fa; 
+  margin: 0; 
+  padding: 0; 
+  color: #222; 
   -webkit-tap-highlight-color: transparent;
 }
 
-body, html {
-  width: 100%;
-  height: 100%;
-  overflow: hidden; /* Sayfa kaymasını engelle */
-  background: #f8f9fa;
-  font-family: 'Segoe UI', sans-serif;
-}
-
 /* MOBİL KONTEYNER */
-.mobile-container {
-  width: 100%;
-  height: 100%;
+.mobile-container { 
+  max-width: 100%; 
+  min-height: 100vh; 
+  background: white; 
   position: relative;
-  background: white;
-  overflow: hidden;
 }
 
-/* ÜST BAR (FIXED - ZIMBA GİBİ) */
+/* GİRİŞ YAPILINCAKİ DÜZEN (Padding ekleyerek alt menüye yer açıyoruz) */
+.app-wrapper {
+  padding-bottom: 80px; 
+}
+
+/* ÜST BİLGİ ÇUBUĞU */
 .top-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 60px;
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* Biri sağa biri sola */
   align-items: center;
-  padding: 0 15px;
+  padding: 10px 15px;
   background: #fff;
   border-bottom: 1px solid #eee;
-  z-index: 100; /* En üstte */
-  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  position: sticky; /* Senin sevdiğin yapı */
+  top: 0;
+  z-index: 50;
+  height: 60px;
 }
 
-/* İÇERİK ALANI (ARADA KALAN BÖLÜM) */
-.content-area {
-  position: absolute;
-  top: 60px;    /* Header yüksekliği kadar aşağıdan başla */
-  bottom: 70px; /* Footer yüksekliği kadar yukarıda bitir */
-  left: 0;
-  right: 0;
-  overflow: hidden; /* İçerik taşarsa scroll kendi içinde olsun */
-  background: #f8f9fa;
-  width: 100%;
-}
-
-/* ALT MENÜ (FIXED - ZIMBA GİBİ) */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 70px;
-  background: white;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-  border-top: 1px solid #eee;
-  z-index: 100;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* BUTON STİLLERİ */
+/* HEADER BUTONLARI */
 .header-btn {
   border: none;
-  border-radius: 8px;
-  padding: 0 12px;
-  font-size: 12px;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 5px;
   height: 36px;
   transition: transform 0.1s;
 }
 .header-btn:active { transform: scale(0.95); }
 
-/* Sihirli Buton */
+/* SİHİRLİ LİSTE BUTONU */
 .magic-btn {
-  border-radius: 20px;
   color: white;
+  /* Renk Dalgalanması */
   background: linear-gradient(270deg, #f59e0b, #ec4899, #8b5cf6, #f59e0b);
   background-size: 300% 300%;
   animation: colorWave 4s ease infinite;
@@ -202,8 +167,26 @@ body, html {
 
 .logout-btn {
   background: #fff0f0;
-  color: #ef4444;
-  border: 1px solid #fecaca;
+  border: 1px solid #ffcdd2;
+  color: #c62828;
+  border-radius: 6px; /* Çıkış butonu daha köşeli kalsın karışmasın */
+}
+
+/* ALT MENÜ TASARIMI */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 70px;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  border-top: 1px solid #eee;
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .nav-item {
@@ -223,11 +206,13 @@ body, html {
 .nav-item .icon { font-size: 24px; filter: grayscale(100%); transition: 0.3s; }
 .nav-item .label { font-size: 11px; font-weight: 600; }
 
+/* Aktif Sekme */
 .nav-item.active { color: #000; }
-.nav-item.active .icon { filter: grayscale(0%); transform: scale(1.1); }
+.nav-item.active .icon { filter: grayscale(0%); transform: scale(1.2); }
 
 .divider { width: 1px; height: 30px; background: #eee; }
 
+/* GEÇİŞ ANİMASYONU */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
