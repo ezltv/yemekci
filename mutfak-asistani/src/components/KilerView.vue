@@ -28,7 +28,6 @@
           </select>
           
           <!-- Hesaplamalı Miktar (Paket x Ağırlık) -->
-          <!-- Buranın arka planını beyaz yaptık -->
           <div class="calc-group">
             <input v-model="yeniMalzeme.paketSayisi" type="number" class="qty-input white-bg" placeholder="1">
             <span class="x-sign">✖</span>
@@ -56,14 +55,13 @@
           </button>
         </div>
 
-        <!-- FİLTRE (GELİŞMİŞ) -->
+        <!-- FİLTRE (DROPDOWN) -->
         <div class="filter-row">
           <label class="filter-label">🔍 Filtrele:</label>
           <select v-model="seciliKonumFiltresi" class="filter-select">
             <option value="Hepsi">🏠 Tümü</option>
             <option value="Tüm Buzdolabı">❄️ Tüm Buzdolabı (Genel)</option>
             <option disabled>──────────</option>
-            <!-- Tüm Depo Yerlerini Filtreye Ekledik -->
             <option v-for="yer in depoYerleri" :key="yer" :value="yer">{{ yer }}</option>
           </select>
         </div>
@@ -111,7 +109,6 @@
 
           <!-- Sağ: Aksiyon Butonları -->
           <div class="card-actions">
-            <!-- KULLAN BUTONU -->
             <button @click="openConsumeModal(item)" class="use-btn">
               <span class="red-arrow">🔻</span> Kullan
             </button>
@@ -134,7 +131,6 @@
         <div class="modal-body">
           <p class="modal-item-name">{{ selectedItemToConsume?.malzeme_adi }}</p>
           <div class="modal-input-group">
-            <!-- MİKTAR GİRİŞ ALANI (Beyaz Arka Plan) -->
             <input 
               type="number" 
               v-model="consumeAmount" 
@@ -174,11 +170,14 @@ const selectedItemToConsume = ref(null)
 const consumeAmount = ref('')
 const consumeInput = ref(null)
 
-// DETAYLI KONUM LİSTESİ (HEM EKLEME HEM FİLTRELEME İÇİN)
 const depoYerleri = [
   "Buzdolabı Üst Raf", "Buzdolabı Ara Raf", "Buzdolabı Alt Raf", 
   "Buzdolabı Kapak", "Buzdolabı Sebzelik",
   "Kiler", "Balkondolap", "Ezeldolap", "Yatakdolap", "Banyo", "Ivırzıvır"
+]
+
+const filtreSecenekleri = [
+  "Buzdolabı", "Kiler", "Balkondolap", "Ezeldolap", "Yatakdolap", "Banyo", "Ivırzıvır"
 ]
 
 const yeniMalzeme = ref({ 
@@ -199,18 +198,14 @@ const toplamStokHesapla = computed(() => {
 const siraliVeFiltreliListe = computed(() => {
   let liste = kiler.value
 
-  // --- AKILLI FİLTRELEME MANTIĞI ---
   if (seciliKonumFiltresi.value !== 'Hepsi') {
     if (seciliKonumFiltresi.value === 'Tüm Buzdolabı') {
-      // "Tüm Buzdolabı" seçilirse içinde "Buzdolabı" geçen HER YERİ getir
       liste = liste.filter(i => i.depo_yer && i.depo_yer.includes('Buzdolabı'))
     } else {
-      // Diğerlerinde (örn: "Buzdolabı Ara Raf") TAM EŞLEŞME yap
       liste = liste.filter(i => i.depo_yer === seciliKonumFiltresi.value)
     }
   }
 
-  // --- SIRALAMA ---
   return liste.sort((a, b) => {
     const aExpired = sktGectiMi(a.son_kullanma_tarihi)
     const bExpired = sktGectiMi(b.son_kullanma_tarihi)
@@ -237,7 +232,6 @@ async function getKiler() {
   loading.value = false
 }
 
-// AI Resim
 async function aiResimUret() {
   if(!yeniMalzeme.value.ad) { alert("Önce ürün adını yazmalısın!"); return; }
   aiLoading.value = true
@@ -371,7 +365,16 @@ onMounted(() => {
 
 .form-row { display: flex; gap: 6px; width: 100%; }
 .input-with-btn { display: flex; flex: 1; gap: 5px; }
-.main-input { flex: 1; padding: 10px; background: #f3f4f6; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; }
+.main-input { 
+  flex: 1; 
+  padding: 10px; 
+  background: #f3f4f6; 
+  border: none; 
+  border-radius: 10px; 
+  font-weight: 600; 
+  font-size: 15px; 
+  color: #111827; /* YAZI RENGİ KOYU YAPILDI */
+}
 .ai-btn { width: 40px; background: #8b5cf6; color: white; border: none; border-radius: 10px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
 .sub-input { padding: 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; color: #374151; }
@@ -379,7 +382,6 @@ onMounted(() => {
 .unit-select { flex: 1.5; }
 .date-input { flex: 1.5; font-size: 11px; }
 
-/* 1x1 HESAP KUTUSU - BEYAZ ARKA PLAN EKLENDİ */
 .calc-group { flex: 1.5; display: flex; align-items: center; gap: 2px; }
 .qty-input { width: 100%; text-align: center; padding: 8px; border: 1px solid #e5e7eb; border-radius: 8px; font-weight: bold; }
 .white-bg { background-color: #ffffff; color: #111827; } 
@@ -387,12 +389,10 @@ onMounted(() => {
 
 .add-btn { flex: 1; background: #111827; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; }
 
-/* FİLTRE SATIRI (SELECT) */
 .filter-row { display: flex; align-items: center; gap: 8px; margin-top: 5px; background: #f3f4f6; padding: 8px; border-radius: 8px; }
 .filter-label { font-size: 12px; font-weight: 600; color: #666; }
 .filter-select { flex: 1; padding: 6px; border-radius: 6px; border: 1px solid #ddd; background: white; font-size: 13px; font-weight: 600; color: #333; }
 
-/* LİSTE */
 .scrollable-list { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px; -webkit-overflow-scrolling: touch; }
 .product-grid { display: flex; flex-direction: column; gap: 10px; }
 
@@ -441,7 +441,6 @@ onMounted(() => {
 
 .del-btn { background: #fee2e2; color: #ef4444; }
 
-/* MODAL */
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.5); z-index: 100;
@@ -462,7 +461,6 @@ onMounted(() => {
 .modal-body { text-align: center; margin-bottom: 20px; }
 .modal-item-name { font-size: 18px; font-weight: 800; color: #111827; margin-bottom: 10px; }
 .modal-input-group { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
-/* MODAL INPUT GÜNCELLENDİ */
 .modal-input { 
   width: 80px; 
   padding: 10px; 
@@ -472,8 +470,8 @@ onMounted(() => {
   font-weight: bold; 
   text-align: center; 
   outline: none;
-  background-color: white; /* BEYAZ ARKA PLAN */
-  color: #111827; /* KOYU METİN */
+  background-color: white; 
+  color: #111827; 
 }
 .modal-input:focus { border-color: #2563eb; }
 .modal-unit { font-size: 16px; color: #6b7280; font-weight: 600; }
