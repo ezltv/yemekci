@@ -28,10 +28,11 @@
           </select>
           
           <!-- Hesaplamalı Miktar (Paket x Ağırlık) -->
+          <!-- Buranın arka planını beyaz yaptık -->
           <div class="calc-group">
-            <input v-model="yeniMalzeme.paketSayisi" type="number" class="qty-input" placeholder="1">
+            <input v-model="yeniMalzeme.paketSayisi" type="number" class="qty-input white-bg" placeholder="1">
             <span class="x-sign">✖</span>
-            <input v-model="yeniMalzeme.paketAgirligi" type="number" class="qty-input" placeholder="1">
+            <input v-model="yeniMalzeme.paketAgirligi" type="number" class="qty-input white-bg" placeholder="1">
           </div>
         </div>
 
@@ -55,12 +56,15 @@
           </button>
         </div>
 
-        <!-- FİLTRE (DROPDOWN) - Ekran taşmasını önlemek için select yaptık -->
+        <!-- FİLTRE (GELİŞMİŞ) -->
         <div class="filter-row">
           <label class="filter-label">🔍 Filtrele:</label>
           <select v-model="seciliKonumFiltresi" class="filter-select">
             <option value="Hepsi">🏠 Tümü</option>
-            <option v-for="yer in filtreSecenekleri" :key="yer" :value="yer">{{ yer }}</option>
+            <option value="Tüm Buzdolabı">❄️ Tüm Buzdolabı (Genel)</option>
+            <option disabled>──────────</option>
+            <!-- Tüm Depo Yerlerini Filtreye Ekledik -->
+            <option v-for="yer in depoYerleri" :key="yer" :value="yer">{{ yer }}</option>
           </select>
         </div>
       </div>
@@ -107,8 +111,10 @@
 
           <!-- Sağ: Aksiyon Butonları -->
           <div class="card-actions">
-            <!-- MANUEL DÜŞME TUŞU -->
-            <button @click="openConsumeModal(item)" class="action-btn decrease-btn">➖</button>
+            <!-- KULLAN BUTONU -->
+            <button @click="openConsumeModal(item)" class="use-btn">
+              <span class="red-arrow">🔻</span> Kullan
+            </button>
             <button @click="malzemeSil(item.id)" class="action-btn del-btn">🗑️</button>
           </div>
         </div>
@@ -167,19 +173,16 @@ const selectedItemToConsume = ref(null)
 const consumeAmount = ref('')
 const consumeInput = ref(null)
 
+// DETAYLI KONUM LİSTESİ (HEM EKLEME HEM FİLTRELEME İÇİN)
 const depoYerleri = [
   "Buzdolabı Üst Raf", "Buzdolabı Ara Raf", "Buzdolabı Alt Raf", 
   "Buzdolabı Kapak", "Buzdolabı Sebzelik",
   "Kiler", "Balkondolap", "Ezeldolap", "Yatakdolap", "Banyo", "Ivırzıvır"
 ]
 
-const filtreSecenekleri = [
-  "Buzdolabı", "Kiler", "Balkondolap", "Ezeldolap", "Yatakdolap", "Banyo", "Ivırzıvır"
-]
-
 const yeniMalzeme = ref({ 
   ad: '', 
-  konum: 'Kiler', 
+  konum: 'Buzdolabı Üst Raf', 
   paketSayisi: 1, 
   paketAgirligi: 1, 
   birim: 'adet', 
@@ -195,20 +198,18 @@ const toplamStokHesapla = computed(() => {
 const siraliVeFiltreliListe = computed(() => {
   let liste = kiler.value
 
-  // Filtreleme
+  // --- AKILLI FİLTRELEME MANTIĞI ---
   if (seciliKonumFiltresi.value !== 'Hepsi') {
-    if (seciliKonumFiltresi.value === 'Buzdolabı') {
+    if (seciliKonumFiltresi.value === 'Tüm Buzdolabı') {
+      // "Tüm Buzdolabı" seçilirse içinde "Buzdolabı" geçen HER YERİ getir
       liste = liste.filter(i => i.depo_yer && i.depo_yer.includes('Buzdolabı'))
     } else {
+      // Diğerlerinde (örn: "Buzdolabı Ara Raf") TAM EŞLEŞME yap
       liste = liste.filter(i => i.depo_yer === seciliKonumFiltresi.value)
     }
   }
 
-  // SIRALAMA MANTIĞI:
-  // 1. Önce SKT Geçmişler (En Tepeye)
-  // 2. Sonra Stoğu Azalanlar (Kritik)
-  // 3. Sonra SKT Yaklaşanlar
-  // 4. En son diğerleri
+  // --- SIRALAMA ---
   return liste.sort((a, b) => {
     const aExpired = sktGectiMi(a.son_kullanma_tarihi)
     const bExpired = sktGectiMi(b.son_kullanma_tarihi)
@@ -220,11 +221,9 @@ const siraliVeFiltreliListe = computed(() => {
     if (aLow && !bLow) return -1
     if (!aLow && bLow) return 1
 
-    // SKT Yaklaşanlar (Varsa)
     if (a.son_kullanma_tarihi && b.son_kullanma_tarihi) {
       return new Date(a.son_kullanma_tarihi) - new Date(b.son_kullanma_tarihi)
     }
-
     return 0
   })
 })
@@ -237,14 +236,12 @@ async function getKiler() {
   loading.value = false
 }
 
-// AI Resim (Gelişmiş Çeviri ile)
+// AI Resim
 async function aiResimUret() {
   if(!yeniMalzeme.value.ad) { alert("Önce ürün adını yazmalısın!"); return; }
   aiLoading.value = true
   
   const arananKelime = yeniMalzeme.value.ad.toLowerCase().trim()
-  
-  // Gelişmiş Sözlük
   const trToEn = { 
     'domates': 'tomato', 'biber': 'pepper', 'süt': 'milk', 'yumurta': 'egg', 
     'deterjan': 'detergent', 'salça': 'tomato paste', 'pirinç': 'rice', 
@@ -259,12 +256,10 @@ async function aiResimUret() {
   } 
   
   const ingilizceIsim = trToEn[arananKelime] || arananKelime
-  
-  // Daha iyi prompt
   const prompt = `${ingilizceIsim} product packaging, grocery item, isolated on white background, high quality, studio lighting, 4k`
   const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=300&height=300&nologo=true`
   
-  await new Promise(r => setTimeout(r, 1000)) // Biraz bekle, yapay hissi ver
+  await new Promise(r => setTimeout(r, 1000))
   yeniMalzeme.value.resim = aiUrl
   aiLoading.value = false
 }
@@ -289,7 +284,6 @@ async function malzemeEkle() {
   } else { alert("Hata: " + error.message) }
 }
 
-// MODAL AÇMA FONKSİYONU
 function openConsumeModal(item) {
   selectedItemToConsume.value = item
   consumeAmount.value = '' 
@@ -299,20 +293,14 @@ function openConsumeModal(item) {
   })
 }
 
-// MODAL ONAYLAMA
 async function confirmConsume() {
   if (!selectedItemToConsume.value || !consumeAmount.value) return
-  
   const miktar = parseFloat(consumeAmount.value)
-  if (isNaN(miktar) || miktar <= 0) {
-    alert("Geçerli bir miktar girin.")
-    return
-  }
+  if (isNaN(miktar) || miktar <= 0) { alert("Geçerli bir miktar girin."); return; }
 
   const currentItem = selectedItemToConsume.value
   const yeniMiktar = Math.max(0, currentItem.miktar - miktar)
 
-  // Eğer 0'a düşerse silme sorusu
   if (yeniMiktar === 0) {
     if (confirm(`${currentItem.malzeme_adi} bitti. Listeden silinsin mi?`)) {
       malzemeSil(currentItem.id)
@@ -324,7 +312,6 @@ async function confirmConsume() {
     await stokGuncelle(currentItem.id, yeniMiktar)
     updateLocalList(currentItem.id, yeniMiktar)
   }
-
   isConsumeModalOpen.value = false
 }
 
@@ -344,7 +331,6 @@ async function malzemeSil(id) {
   kiler.value = kiler.value.filter(i => i.id !== id)
 }
 
-// KONTROLLER
 function stokAzMi(item) {
   const miktar = parseFloat(item.miktar)
   const birim = item.birim ? item.birim.toLowerCase() : ''
@@ -368,27 +354,15 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ANA YAPI */
 .kiler-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  background: #f8f9fa;
-  position: relative;
-  overflow: hidden;
+  display: flex; flex-direction: column; height: 100%; width: 100%;
+  background: #f8f9fa; position: relative; overflow: hidden;
 }
 
-/* STICKY HEADER */
 .sticky-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: #fff;
-  border-bottom: 1px solid #eee;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-  flex-shrink: 0;
-  width: 100%;
+  position: sticky; top: 0; z-index: 20;
+  background: #fff; border-bottom: 1px solid #eee;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.03); flex-shrink: 0; width: 100%;
 }
 
 .header-content { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
@@ -404,8 +378,10 @@ onMounted(() => {
 .unit-select { flex: 1.5; }
 .date-input { flex: 1.5; font-size: 11px; }
 
+/* 1x1 HESAP KUTUSU - BEYAZ ARKA PLAN EKLENDİ */
 .calc-group { flex: 1.5; display: flex; align-items: center; gap: 2px; }
 .qty-input { width: 100%; text-align: center; padding: 8px; border: 1px solid #e5e7eb; border-radius: 8px; font-weight: bold; }
+.white-bg { background-color: #ffffff; color: #111827; } 
 .x-sign { color: #9ca3af; font-size: 12px; font-weight: bold; }
 
 .add-btn { flex: 1; background: #111827; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; }
@@ -426,7 +402,6 @@ onMounted(() => {
   transition: transform 0.1s;
 }
 
-/* YANIP SÖNME EFEKTİ VE KIRMIZI STİL */
 @keyframes blink-red {
   0% { border-color: #fca5a5; background-color: #fff1f2; }
   50% { border-color: #ef4444; background-color: #ffe4e6; }
@@ -454,15 +429,22 @@ onMounted(() => {
 
 .card-actions { display: flex; gap: 6px; align-items: center; }
 .action-btn { width: 32px; height: 32px; border-radius: 8px; border: none; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; flex-shrink: 0; }
-.decrease-btn { background: #eff6ff; color: #2563eb; font-weight: bold; border: 1px solid #dbeafe; }
+
+.use-btn {
+  background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 8px;
+  padding: 6px 10px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px;
+  cursor: pointer; transition: all 0.2s; height: 32px;
+}
+.use-btn:active { transform: scale(0.95); background: #e2e8f0; }
+.red-arrow { color: #ef4444; font-size: 10px; transform: translateY(1px); }
+
 .del-btn { background: #fee2e2; color: #ef4444; }
 
-/* MODAL STİLLERİ */
+/* MODAL */
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.5); z-index: 100;
-  display: flex; justify-content: center; align-items: center;
-  backdrop-filter: blur(2px);
+  display: flex; justify-content: center; align-items: center; backdrop-filter: blur(2px);
 }
 .modal-content {
   background: white; width: 85%; max-width: 320px;
