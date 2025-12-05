@@ -1,17 +1,22 @@
 <!doctype html>
-<html lang="en">
+<html lang="tr">
   <head>
-     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta charset="UTF-8" />
+    
+    <!-- 1. Favicon (Tarayıcı Sekmesi İkonu) -->
+    <link rel="icon" type="image/png" href="/pwa-192x192.png" />
+    
+    <!-- 2. Apple Touch Icon (iPhone Ana Ekran İkonu) -->
+    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
     
     <!-- KRİTİK MOBİL AYARLAR -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" />
     
-    <!-- iOS / Apple Ayarları -->
+    <!-- iOS / Apple PWA Ayarları -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Yemekçi" />
+    <meta name="apple-mobile-web-app-title" content="Mutfak Asistanı" />
     
     <!-- Tailwind CSS (Hızlı stil için CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -32,8 +37,11 @@
       }
     </script>
 
+    <!-- Manifest Dosyası Bağlantısı -->
     <link rel="manifest" href="/manifest.json" />
-    <title>mutfak-asistani</title>
+    
+    <title>Mutfak Asistanı</title>
+  </head>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>

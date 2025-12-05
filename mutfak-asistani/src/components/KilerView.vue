@@ -87,29 +87,30 @@
             'bayat': sktGectiMi(item.son_kullanma_tarihi) 
           }"
         >
-          <!-- ÜST KISIM: Resim ve Bilgiler -->
+          <!-- ÜST KISIM: Bilgiler (Solda) ve Resim (Sağda) -->
           <div class="card-top">
-            <div class="card-left">
-              <div class="img-box">
-                <img 
-                  :src="item.resim_url || 'https://placehold.co/100x100?text=📦'" 
-                  @error="$event.target.src='https://placehold.co/100x100?text=📦'"
-                  class="product-img"
-                />
-                <span v-if="sktGectiMi(item.son_kullanma_tarihi)" class="expire-badge">SKT!</span>
+            <!-- SOL: Bilgiler -->
+            <div class="info-col">
+              <div class="p-name">{{ item.malzeme_adi }}</div>
+              <div class="p-loc">{{ item.depo_yer }}</div>
+              <div class="p-qty" :class="{'text-danger': stokAzMi(item)}">
+                {{ item.miktar }} {{ item.birim }}
+                <span v-if="stokAzMi(item)" class="alert-text">⚠️ AZ KALDI</span>
               </div>
-              <div class="info-col">
-                <div class="p-name">{{ item.malzeme_adi }}</div>
-                <div class="p-loc">{{ item.depo_yer }}</div>
-                <div class="p-qty" :class="{'text-danger': stokAzMi(item)}">
-                  {{ item.miktar }} {{ item.birim }}
-                  <span v-if="stokAzMi(item)" class="alert-text">⚠️ AZ KALDI</span>
-                </div>
-                <!-- SKT TARİHİ -->
-                <div class="p-skt" v-if="item.son_kullanma_tarihi">
-                   📅 SKT: {{ formatTarih(item.son_kullanma_tarihi) }}
-                </div>
+              <!-- SKT TARİHİ -->
+              <div class="p-skt" v-if="item.son_kullanma_tarihi">
+                 📅 SKT: {{ formatTarih(item.son_kullanma_tarihi) }}
               </div>
+            </div>
+
+            <!-- SAĞ: Büyük Resim -->
+            <div class="img-box">
+              <img 
+                :src="item.resim_url || 'https://placehold.co/100x100?text=📦'" 
+                @error="$event.target.src='https://placehold.co/100x100?text=📦'"
+                class="product-img"
+              />
+              <span v-if="sktGectiMi(item.son_kullanma_tarihi)" class="expire-badge">SKT!</span>
             </div>
           </div>
 
@@ -423,7 +424,10 @@ onMounted(() => {
 
 .card-top {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
+  gap: 15px;
 }
 
 @keyframes blink-red {
@@ -439,18 +443,32 @@ onMounted(() => {
 
 .product-card.bayat { opacity: 0.6; filter: grayscale(0.8); border: 1px solid #999; }
 
-.card-left { display: flex; gap: 12px; align-items: center; min-width: 0; flex: 1; }
-.img-box { position: relative; width: 80px; height: 80px; border-radius: 10px; overflow: hidden; background: #f3f4f6; flex-shrink: 0; }
+.img-box { 
+  position: relative; 
+  width: 110px; /* GÖRSEL BÜYÜTÜLDÜ */
+  height: 110px; 
+  border-radius: 12px; 
+  overflow: hidden; 
+  background: #f3f4f6; 
+  flex-shrink: 0; 
+}
 .product-img { width: 100%; height: 100%; object-fit: cover; }
 .expire-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(220,38,38,0.9); color: white; font-size: 8px; text-align: center; font-weight: bold; padding: 1px; }
 
-.info-col { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
-.p-name { font-weight: 700; font-size: 16px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.p-loc { font-size: 12px; color: #6b7280; font-weight: 500; }
-.p-qty { font-size: 14px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
-.text-danger { color: #dc2626; font-weight: 800; }
-.alert-text { font-size: 10px; background: #fee2e2; color: #991b1b; padding: 1px 4px; border-radius: 4px; }
-.p-skt { font-size: 11px; color: #059669; font-weight: 600; margin-top: 2px; } /* SKT STİLİ */
+.info-col { 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 4px;
+  align-items: flex-start; 
+}
+/* YAZILAR BÜYÜTÜLDÜ VE KALINLAŞTIRILDI */
+.p-name { font-weight: 800; font-size: 18px; color: #111827; white-space: normal; line-height: 1.2; }
+.p-loc { font-size: 13px; color: #4b5563; font-weight: 600; }
+.p-qty { font-size: 15px; font-weight: 800; color: #374151; display: flex; align-items: center; gap: 4px; }
+.text-danger { color: #dc2626; font-weight: 900; }
+.alert-text { font-size: 11px; background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: 700;}
+.p-skt { font-size: 12px; color: #059669; font-weight: 700; margin-top: 2px; }
 
 /* AKSİYON BUTONLARI (ALT KISIM) */
 .card-actions { 
@@ -463,15 +481,15 @@ onMounted(() => {
 }
 
 .action-btn { 
-  height: 36px; 
+  height: 40px; /* Butonlar biraz daha yüksek */
   border-radius: 8px; 
   border: none; 
   display: flex; 
   align-items: center; 
   justify-content: center; 
-  font-size: 14px; 
+  font-size: 15px; 
   cursor: pointer; 
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .use-btn {
@@ -480,9 +498,9 @@ onMounted(() => {
   color: #0f172a; 
   border: 1px solid #cbd5e1; 
   border-radius: 8px;
-  height: 36px;
-  font-size: 13px; 
-  font-weight: 700; 
+  height: 40px;
+  font-size: 14px; 
+  font-weight: 800; 
   display: flex; 
   align-items: center; 
   justify-content: center;
@@ -491,7 +509,7 @@ onMounted(() => {
   transition: all 0.2s;
 }
 .use-btn:active { transform: scale(0.95); background: #e2e8f0; }
-.red-arrow { color: #ef4444; font-size: 12px; }
+.red-arrow { color: #ef4444; font-size: 14px; }
 
 .del-btn { 
   flex: 1; /* Daha dar alan */

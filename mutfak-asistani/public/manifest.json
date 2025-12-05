@@ -1,6 +1,6 @@
 {
-  "name": "mutfak-asistani",
-  "short_name": "mutfak-asistani",
+  "name": "Mutfak Asistanı",
+  "short_name": "Mutfak Asistanı",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -8,8 +8,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/vite.svg",
-      "type": "image/svg+xml",
+      "src": "/pwa-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "type": "image/png",
       "sizes": "512x512"
     }
   ]
