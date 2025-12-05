@@ -13,17 +13,18 @@
       <header class="top-bar">
         <!-- SOL GRUP -->
         <div class="left-group">
-          <!-- Alışveriş Listesi -->
+          <!-- Alışveriş Listesi Butonu (İsim Güncellendi) -->
           <button 
             @click="currentView = 'alisveris'" 
             class="header-btn magic-btn"
             :class="{ active: currentView === 'alisveris' }"
           >
-            📝 Liste
+            📝 Alışveriş Listesi
           </button>
           
-          <!-- TEST BUTONU (BİLDİRİM İÇİN) -->
-          <button @click="testBildirim" class="header-btn test-btn" title="Bildirim Testi">
+          <!-- BİLDİRİM / ACİL BUTONU -->
+          <!-- Tıklayınca hem test eder hem Kiler'e gider -->
+          <button @click="handleBellClick" class="header-btn test-btn" title="Acil Durumlar">
             🔔
           </button>
         </div>
@@ -131,25 +132,27 @@ const checkExpirationAndNotify = async () => {
   }
 }
 
-// --- TEST BUTONU FONKSİYONU ---
-const testBildirim = async () => {
+// --- ZİL BUTONU FONKSİYONU ---
+const handleBellClick = async () => {
+  // 1. Önce Kiler sayfasına yönlendir (Acil ürünler orada en tepede çıkar)
+  currentView.value = 'kiler';
+
+  // 2. Bildirim izni kontrolü ve Test
   if (!("Notification" in window)) {
     alert("Cihazın bu özelliği desteklemiyor.");
     return;
   }
 
-  // İzin iste
   let permission = Notification.permission;
   if (permission === "default") {
     permission = await Notification.requestPermission();
   }
 
   if (permission === "granted") {
-    // Hemen bildirim gönder
-    new Notification("🔔 Test Başarılı!", {
-      body: "Bildirim sistemin harika çalışıyor şefim! 👨‍🍳",
+    new Notification("🔔 Kontrol Edildi", {
+      body: "Kilerindeki acil ürünler kontrol ediliyor...",
       icon: '/pwa-192x192.png',
-      vibrate: [200, 100, 200]
+      silent: true // Ses çıkarmadan bilgi ver
     });
   } else {
     alert("Bildirim izni reddedildi. Ayarlardan açmalısın.");
@@ -240,6 +243,7 @@ body {
   background-size: 300% 300%;
   animation: colorWave 4s ease infinite;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  white-space: nowrap; /* Yazı taşmasın */
 }
 
 /* TEST BUTONU STİLİ */
