@@ -134,10 +134,11 @@
         <div class="modal-body">
           <p class="modal-item-name">{{ selectedItemToConsume?.malzeme_adi }}</p>
           <div class="modal-input-group">
+            <!-- MİKTAR GİRİŞ ALANI (Beyaz Arka Plan) -->
             <input 
               type="number" 
               v-model="consumeAmount" 
-              class="modal-input" 
+              class="modal-input white-bg" 
               placeholder="0" 
               ref="consumeInput"
               @keyup.enter="confirmConsume"
@@ -461,7 +462,19 @@ onMounted(() => {
 .modal-body { text-align: center; margin-bottom: 20px; }
 .modal-item-name { font-size: 18px; font-weight: 800; color: #111827; margin-bottom: 10px; }
 .modal-input-group { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
-.modal-input { width: 80px; padding: 10px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 20px; font-weight: bold; text-align: center; outline: none; }
+/* MODAL INPUT GÜNCELLENDİ */
+.modal-input { 
+  width: 80px; 
+  padding: 10px; 
+  border: 2px solid #e5e7eb; 
+  border-radius: 12px; 
+  font-size: 20px; 
+  font-weight: bold; 
+  text-align: center; 
+  outline: none;
+  background-color: white; /* BEYAZ ARKA PLAN */
+  color: #111827; /* KOYU METİN */
+}
 .modal-input:focus { border-color: #2563eb; }
 .modal-unit { font-size: 16px; color: #6b7280; font-weight: 600; }
 .modal-hint { font-size: 12px; color: #9ca3af; margin: 0; }
