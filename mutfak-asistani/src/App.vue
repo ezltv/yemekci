@@ -7,7 +7,7 @@
     </div>
 
     <!-- 2. DURUM: GİRİŞ YAPILMIŞSA -->
-    <div v-else class="app-wrapper">
+    <div v-else class="app-layout">
       
       <!-- ÜST BAR: Sol: Liste, Sağ: Çıkış -->
       <header class="top-bar">
@@ -21,7 +21,9 @@
         </button>
 
         <!-- SAĞ: Çıkış Butonu -->
-        <button @click="cikisYap" class="logout-btn">Çıkış Yap 🚪</button>
+        <button @click="cikisYap" class="header-btn logout-btn">
+          Çıkış Yap 🚪
+        </button>
       </header>
 
       <!-- İÇERİK ALANI -->
@@ -124,7 +126,8 @@ body {
   display: flex;
   justify-content: space-between; /* Biri sağa biri sola */
   align-items: center;
-  padding: 10px 15px;
+  /* DÜZELTME: Kenar boşlukları azaltıldı */
+  padding: 0 6px; 
   background: #fff;
   border-bottom: 1px solid #eee;
   position: sticky; /* Senin sevdiğin yapı */
@@ -215,4 +218,14 @@ body {
 /* GEÇİŞ ANİMASYONU */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* --- GLOBAL İÇERİK GENİŞLETME --- */
+/* Kiler ve Tarif sayfalarının içindeki paddingleri ezerek ekranı tam kaplamasını sağla */
+.header-content, 
+.scrollable-list,
+.view-container .scroll-content,
+.view-container .fixed-header {
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
 </style>
