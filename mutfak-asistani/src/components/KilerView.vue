@@ -373,7 +373,7 @@ onMounted(() => {
   border-radius: 10px; 
   font-weight: 600; 
   font-size: 15px; 
-  color: #111827; /* YAZI RENGİ KOYU YAPILDI */
+  color: #111827; 
 }
 .ai-btn { width: 40px; background: #8b5cf6; color: white; border: none; border-radius: 10px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
@@ -417,14 +417,16 @@ onMounted(() => {
 .product-card.bayat { opacity: 0.6; filter: grayscale(0.8); border: 1px solid #999; }
 
 .card-left { display: flex; gap: 10px; align-items: center; min-width: 0; flex: 1; }
-.img-box { position: relative; width: 50px; height: 50px; border-radius: 10px; overflow: hidden; background: #f3f4f6; flex-shrink: 0; }
+/* RESİM KUTUSU VE RESİM BOYUTU ARTTIRILDI */
+.img-box { position: relative; width: 80px; height: 80px; border-radius: 10px; overflow: hidden; background: #f3f4f6; flex-shrink: 0; }
 .product-img { width: 100%; height: 100%; object-fit: cover; }
 .expire-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(220,38,38,0.9); color: white; font-size: 8px; text-align: center; font-weight: bold; padding: 1px; }
 
 .info-col { display: flex; flex-direction: column; min-width: 0; }
-.p-name { font-weight: 700; font-size: 14px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.p-loc { font-size: 10px; color: #6b7280; font-weight: 500; margin-bottom: 2px; }
-.p-qty { font-size: 12px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 4px; }
+/* YAZI BOYUTLARI ARTTIRILDI */
+.p-name { font-weight: 700; font-size: 16px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-loc { font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 2px; }
+.p-qty { font-size: 14px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 4px; }
 .text-danger { color: #dc2626; font-weight: 800; }
 .alert-text { font-size: 10px; background: #fee2e2; color: #991b1b; padding: 1px 4px; border-radius: 4px; }
 
