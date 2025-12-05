@@ -9,19 +9,20 @@
     <!-- 2. DURUM: GİRİŞ YAPILMIŞSA -->
     <div v-else class="app-layout">
       
-      <!-- ÜST BAR: Çıkış ve Liste Butonları -->
+      <!-- ÜST BAR: Sol: Liste, Sağ: Çıkış -->
       <header class="top-bar">
-        <button @click="cikisYap" class="header-btn logout-btn">
-          🚪 Çıkış
-        </button>
-        
-        <!-- Alışveriş Listesi Butonu Buraya Taşındı -->
+        <!-- SOL: Alışveriş Listesi Butonu -->
         <button 
           @click="currentView = 'alisveris'" 
           class="header-btn list-btn"
           :class="{ active: currentView === 'alisveris' }"
         >
-          📝 Alışveriş Listesi
+          📝 Liste
+        </button>
+
+        <!-- SAĞ: Çıkış Butonu (Yeri Sabit) -->
+        <button @click="cikisYap" class="header-btn logout-btn">
+          Çıkış 🚪
         </button>
       </header>
 
@@ -34,7 +35,7 @@
         </Transition>
       </main>
 
-      <!-- ALT MENÜ (Sadece Kiler ve Şef Kaldı - Ferahladı) -->
+      <!-- ALT MENÜ (Sadece 2 Buton: Kiler ve Şef - Ferah Düzen) -->
       <nav class="bottom-nav">
         <button 
           @click="currentView = 'kiler'" 
@@ -112,25 +113,28 @@ body {
 
 .app-layout { display: flex; flex-direction: column; height: 100%; width: 100%; }
 
-/* ÜST BAR */
+/* ÜST BAR DÜZENİ (ZIMBA GİBİ SABİT) */
 .top-bar {
-  flex-shrink: 0; height: 60px; /* Biraz yükselttim rahat basılsın diye */
-  display: flex; justify-content: space-between; align-items: center; 
+  flex-shrink: 0; height: 60px; 
+  display: flex; justify-content: space-between; /* Biri en sola, biri en sağa */
+  align-items: center; 
   padding: 0 15px; background: white; border-bottom: 1px solid #f0f0f0; 
   z-index: 50; box-sizing: border-box;
 }
 
-/* Üst Bar Buton Stilleri */
+/* HEADER BUTONLARI */
 .header-btn {
   border: none; border-radius: 8px; padding: 8px 12px; 
   font-size: 13px; font-weight: 600; cursor: pointer; 
   display: flex; align-items: center; gap: 6px; transition: transform 0.1s;
+  height: 36px; /* Yükseklik sabitlendi, kaymayı önler */
 }
 .header-btn:active { transform: scale(0.95); }
 
-.logout-btn { background: #fee2e2; color: #ef4444; }
 .list-btn { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
 .list-btn.active { background: #fcd34d; color: #78350f; border-color: #f59e0b; }
+
+.logout-btn { background: #fee2e2; color: #ef4444; }
 
 /* İÇERİK ALANI */
 .content-area {
