@@ -87,32 +87,38 @@
             'bayat': sktGectiMi(item.son_kullanma_tarihi) 
           }"
         >
-          <!-- Sol: Resim ve Bilgi -->
-          <div class="card-left">
-            <div class="img-box">
-              <img 
-                :src="item.resim_url || 'https://placehold.co/100x100?text=📦'" 
-                @error="$event.target.src='https://placehold.co/100x100?text=📦'"
-                class="product-img"
-              />
-              <span v-if="sktGectiMi(item.son_kullanma_tarihi)" class="expire-badge">SKT!</span>
-            </div>
-            <div class="info-col">
-              <div class="p-name">{{ item.malzeme_adi }}</div>
-              <div class="p-loc">{{ item.depo_yer }}</div>
-              <div class="p-qty" :class="{'text-danger': stokAzMi(item)}">
-                {{ item.miktar }} {{ item.birim }}
-                <span v-if="stokAzMi(item)" class="alert-text">⚠️ AZ KALDI</span>
+          <!-- ÜST KISIM: Resim ve Bilgiler -->
+          <div class="card-top">
+            <div class="card-left">
+              <div class="img-box">
+                <img 
+                  :src="item.resim_url || 'https://placehold.co/100x100?text=📦'" 
+                  @error="$event.target.src='https://placehold.co/100x100?text=📦'"
+                  class="product-img"
+                />
+                <span v-if="sktGectiMi(item.son_kullanma_tarihi)" class="expire-badge">SKT!</span>
+              </div>
+              <div class="info-col">
+                <div class="p-name">{{ item.malzeme_adi }}</div>
+                <div class="p-loc">{{ item.depo_yer }}</div>
+                <div class="p-qty" :class="{'text-danger': stokAzMi(item)}">
+                  {{ item.miktar }} {{ item.birim }}
+                  <span v-if="stokAzMi(item)" class="alert-text">⚠️ AZ KALDI</span>
+                </div>
+                <!-- SKT TARİHİ -->
+                <div class="p-skt" v-if="item.son_kullanma_tarihi">
+                   📅 SKT: {{ formatTarih(item.son_kullanma_tarihi) }}
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Sağ: Aksiyon Butonları -->
+          <!-- ALT KISIM: Butonlar -->
           <div class="card-actions">
             <button @click="openConsumeModal(item)" class="use-btn">
               <span class="red-arrow">🔻</span> Kullan
             </button>
-            <button @click="malzemeSil(item.id)" class="action-btn del-btn">🗑️</button>
+            <button @click="malzemeSil(item.id)" class="action-btn del-btn">Sil 🗑️</button>
           </div>
         </div>
       </div>
@@ -343,6 +349,13 @@ function sktGectiMi(tarihStr) {
   return skt < bugun 
 }
 
+// YENİ: Tarih formatlama fonksiyonu
+function formatTarih(tarihStr) {
+  if (!tarihStr) return ''
+  const date = new Date(tarihStr)
+  return date.toLocaleDateString('tr-TR')
+}
+
 onMounted(() => {
   getKiler()
 })
@@ -397,10 +410,20 @@ onMounted(() => {
 .product-grid { display: flex; flex-direction: column; gap: 10px; }
 
 .product-card {
-  background: white; padding: 10px; border-radius: 16px;
-  display: flex; justify-content: space-between; align-items: center;
-  border: 1px solid #f3f4f6; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  background: white; 
+  padding: 12px; 
+  border-radius: 16px;
+  display: flex; 
+  flex-direction: column; /* DİKEY YERLEŞİM */
+  border: 1px solid #f3f4f6; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
   transition: transform 0.1s;
+  gap: 10px;
+}
+
+.card-top {
+  display: flex;
+  width: 100%;
 }
 
 @keyframes blink-red {
@@ -416,32 +439,65 @@ onMounted(() => {
 
 .product-card.bayat { opacity: 0.6; filter: grayscale(0.8); border: 1px solid #999; }
 
-.card-left { display: flex; gap: 10px; align-items: center; min-width: 0; flex: 1; }
-/* RESİM KUTUSU VE RESİM BOYUTU ARTTIRILDI */
+.card-left { display: flex; gap: 12px; align-items: center; min-width: 0; flex: 1; }
 .img-box { position: relative; width: 80px; height: 80px; border-radius: 10px; overflow: hidden; background: #f3f4f6; flex-shrink: 0; }
 .product-img { width: 100%; height: 100%; object-fit: cover; }
 .expire-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(220,38,38,0.9); color: white; font-size: 8px; text-align: center; font-weight: bold; padding: 1px; }
 
-.info-col { display: flex; flex-direction: column; min-width: 0; }
-/* YAZI BOYUTLARI ARTTIRILDI */
+.info-col { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .p-name { font-weight: 700; font-size: 16px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.p-loc { font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 2px; }
-.p-qty { font-size: 14px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 4px; }
+.p-loc { font-size: 12px; color: #6b7280; font-weight: 500; }
+.p-qty { font-size: 14px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 .text-danger { color: #dc2626; font-weight: 800; }
 .alert-text { font-size: 10px; background: #fee2e2; color: #991b1b; padding: 1px 4px; border-radius: 4px; }
+.p-skt { font-size: 11px; color: #059669; font-weight: 600; margin-top: 2px; } /* SKT STİLİ */
 
-.card-actions { display: flex; gap: 6px; align-items: center; }
-.action-btn { width: 32px; height: 32px; border-radius: 8px; border: none; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; flex-shrink: 0; }
+/* AKSİYON BUTONLARI (ALT KISIM) */
+.card-actions { 
+  display: flex; 
+  gap: 10px; 
+  align-items: center; 
+  width: 100%; 
+  border-top: 1px solid #f3f4f6;
+  padding-top: 10px;
+}
+
+.action-btn { 
+  height: 36px; 
+  border-radius: 8px; 
+  border: none; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  font-size: 14px; 
+  cursor: pointer; 
+  font-weight: 600;
+}
 
 .use-btn {
-  background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 8px;
-  padding: 6px 10px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px;
-  cursor: pointer; transition: all 0.2s; height: 32px;
+  flex: 2; /* Geniş alan */
+  background: #f1f5f9; 
+  color: #0f172a; 
+  border: 1px solid #cbd5e1; 
+  border-radius: 8px;
+  height: 36px;
+  font-size: 13px; 
+  font-weight: 700; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer; 
+  transition: all 0.2s;
 }
 .use-btn:active { transform: scale(0.95); background: #e2e8f0; }
-.red-arrow { color: #ef4444; font-size: 10px; transform: translateY(1px); }
+.red-arrow { color: #ef4444; font-size: 12px; }
 
-.del-btn { background: #fee2e2; color: #ef4444; }
+.del-btn { 
+  flex: 1; /* Daha dar alan */
+  background: #fee2e2; 
+  color: #ef4444; 
+}
 
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
